@@ -64,14 +64,8 @@ int log_event(char* text, int node, struct clock* clock, int clock_length) {
 
 // Log debug lines to log
 int log_debug(char* text) {
-    if (!running) {
-        fp = fopen(LOG_FILE,"w"); // Open new file
-    } else {
-        fp = fopen(LOG_FILE, "a+"); // Otherwise append
-    }
-
-    if (!fp) {
-        fprintf(stderr, "Unable to open log file!");
+    if (!running || !fp) {
+        fprintf(stderr, "Logger not initialized!");
         return -1;
     }
 
