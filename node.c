@@ -12,6 +12,7 @@
 #include <netdb.h>
 
 #include "msg.h"
+#include "logger.h"
 
 
 // The purpose of this file is to provide insight into how to make various library
@@ -30,6 +31,22 @@ void usage(char * cmd) {
 
 
 int main(int argc, char ** argv) {
+
+  struct clock vectorClock[MAX_NODES];
+  for (int i = 0; i < MAX_NODES; i++) {
+      vectorClock[i].nodeId = -1;
+      vectorClock[i].time = 0;
+  }
+  vectorClock[1].nodeId = 9;
+  vectorClock[1].time = 5;
+  vectorClock[5].nodeId = 4;
+  vectorClock[5].time = 6;
+  vectorClock[7].nodeId = 10;
+
+  init_logger("event.log");
+
+  log_debug("Testing Testing");
+  log_event("Started N3", 3, vectorClock, MAX_NODES);
 
   // This is some sample code feel free to delete it
   
