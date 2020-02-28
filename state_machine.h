@@ -23,8 +23,10 @@ struct node_properties {
     char *         logFileName;
     unsigned long  timeoutValue;
     unsigned long  AYATime;
-    unsigned long  myClock;
     unsigned long  sendFailureProbability;
+
+    unsigned long coordinator;
+
 
     struct clock vectorClock[MAX_NODES];
 };

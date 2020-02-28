@@ -36,7 +36,6 @@ int main(int argc, char ** argv) {
   // Struct to contain all properties
   struct node_properties properties;
   properties.state = NORMAL_STATE;
-  properties.myClock = 1;
 
   if (argc != 7) {
     usage(argv[0]);
@@ -101,9 +100,9 @@ int main(int argc, char ** argv) {
   printf("Some examples of how to format data for shiviz\n");
   printf("Starting up Node %d\n", properties.port);
   
-  printf("N%d {\"N%d\" : %d }\n", properties.port, properties.port, properties.myClock++);
+  printf("N%d {\"N%d\" : %d }\n", properties.port, properties.port, 1);
   printf("Sending to Node 1\n");
-  printf("N%d {\"N%d\" : %d }\n", properties.port, properties.port, properties.myClock++);
+  printf("N%d {\"N%d\" : %d }\n", properties.port, properties.port, 2);
   
   if (err) {
     printf("%d conversion error%sencountered, program exiting.\n",
