@@ -43,21 +43,28 @@ int log_event(char* text, int node, struct clock* clock, int clock_length) {
         return -1;
     }
 
+    char event_str[256] = "";
+    int pos = 0;
+
     // Log event description
-    fprintf(fp, "%s\n", text);
+    pos += sprintf(&event_str[pos], "%s\n", text);
 
     // Log vector clock
-    fprintf(fp, "N%d {", node);
+    pos += sprintf(&event_str[pos],  "N%d {", node);
     bool first = true;
     for (int i = 0; i < clock_length; i++) {
         // Ignore nodes we don't know the time of
         if (clock[i].time <= 0) continue;
 
-        if (!first) fprintf(fp, " , ");
-        fprintf(fp, "\"N%d\" : %d", clock[i].nodeId, clock[i].time);
+        if (!first) {
+            pos += sprintf(&event_str[pos], " , ");
+        }
+        pos += sprintf(&event_str[pos], "\"N%d\" : %d", clock[i].nodeId, clock[i].time);
         first = false;
     }
-    fprintf(fp, "}\n");
+    pos += sprintf(&event_str[pos], "}\n");
+
+    fprintf(fp, event_str);
 
     return 0;
 }
