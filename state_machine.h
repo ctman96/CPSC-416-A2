@@ -38,6 +38,10 @@ int aya_state(struct node_properties* properties);
 int elect_state(struct node_properties* properties);
 int await_answer_state(struct node_properties* properties);
 int await_coord_state(struct node_properties* properties);
+struct msg receive_message(struct node_properties* properties);
+int send_message(struct node_properties* properties);
+int reply_answer(struct node_properties* properties, struct msg* msg);
+int register_coordinator(struct node_properties* properties, struct msg* msg);
 
 
 

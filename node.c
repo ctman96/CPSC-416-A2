@@ -80,6 +80,7 @@ int main(int argc, char ** argv) {
     properties.vectorClock[i].nodeId = -1;
     properties.vectorClock[i].time = 0;
   }
+  // TODO load groupListFile
   properties.vectorClock[1].nodeId = 9;
   properties.vectorClock[1].time = 5;
   properties.vectorClock[5].nodeId = 4;
