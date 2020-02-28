@@ -41,3 +41,24 @@ int await_answer_state(struct node_properties* properties) {
 int await_coord_state(struct node_properties* properties) {
     // TODO
 }
+
+struct msg receive_message(struct node_properties* properties) {
+    // TODO
+    struct msg message = {
+
+    };
+    return message;
+}
+
+int send_message(struct node_properties* properties) {
+    // TODO
+}
+
+int reply_answer(struct node_properties* properties, struct msg* msg) {
+    // TODO
+}
+
+int register_coordinator(struct node_properties* properties, struct msg* msg) {
+    // TODO
+}
+
