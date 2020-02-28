@@ -73,6 +73,5 @@ struct msg {
   unsigned int   electionID;
   struct clock   vectorClock[MAX_NODES];
 };
-  
 
 #endif 

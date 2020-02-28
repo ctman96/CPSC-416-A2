@@ -13,6 +13,7 @@
 
 #include "msg.h"
 #include "logger.h"
+#include "state_machine.h"
 
 
 // The purpose of this file is to provide insight into how to make various library
@@ -32,31 +33,11 @@ void usage(char * cmd) {
 
 int main(int argc, char ** argv) {
 
-  struct clock vectorClock[MAX_NODES];
-  for (int i = 0; i < MAX_NODES; i++) {
-      vectorClock[i].nodeId = -1;
-      vectorClock[i].time = 0;
-  }
-  vectorClock[1].nodeId = 9;
-  vectorClock[1].time = 5;
-  vectorClock[5].nodeId = 4;
-  vectorClock[5].time = 6;
-  vectorClock[7].nodeId = 10;
+  // Struct to contain all properties
+  struct node_properties properties;
+  properties.state = NORMAL_STATE;
+  properties.myClock = 1;
 
-  init_logger("event.log");
-
-  log_debug("Testing Testing");
-  log_event("Started N3", 3, vectorClock, MAX_NODES);
-
-  // This is some sample code feel free to delete it
-  
-  unsigned long  port;
-  char *         groupListFileName;
-  char *         logFileName;
-  unsigned long  timeoutValue;
-  unsigned long  AYATime;
-  unsigned long  myClock = 1;
-  unsigned long  sendFailureProbability;
   if (argc != 7) {
     usage(argv[0]);
     return -1;
@@ -69,45 +50,60 @@ int main(int argc, char ** argv) {
   char * end;
   int err = 0;
 
-  port = strtoul(argv[1], &end, 10);
+  properties.port = strtoul(argv[1], &end, 10);
   if (argv[1] == end) {
     printf("Port conversion error\n");
     err++;
   }
 
-  groupListFileName = argv[2];
-  logFileName       = argv[3];
+  properties.groupListFileName = argv[2];
+  properties.logFileName       = argv[3];
 
-  timeoutValue      = strtoul(argv[4], &end, 10);
+  properties.timeoutValue      = strtoul(argv[4], &end, 10);
   if (argv[4] == end) {
     printf("Timeout value conversion error\n");
     err++;
   }
 
-  AYATime  = strtoul(argv[5], &end, 10);
+  properties.AYATime  = strtoul(argv[5], &end, 10);
   if (argv[5] == end) {
     printf("AYATime conversion error\n");
     err++;
   }
 
-  sendFailureProbability  = strtoul(argv[6], &end, 10);
+  properties.sendFailureProbability  = strtoul(argv[6], &end, 10);
   if (argv[5] == end) {
     printf("sendFailureProbability conversion error\n");
     err++;
   }
+
+  for (int i = 0; i < MAX_NODES; i++) {
+    properties.vectorClock[i].nodeId = -1;
+    properties.vectorClock[i].time = 0;
+  }
+  properties.vectorClock[1].nodeId = 9;
+  properties.vectorClock[1].time = 5;
+  properties.vectorClock[5].nodeId = 4;
+  properties.vectorClock[5].time = 6;
+  properties.vectorClock[7].nodeId = 10;
+
+  if (init_logger(properties.logFileName) == -1) err++;
+
+  log_debug("Testing Testing");
+  log_event("Started N3", 3, properties.vectorClock, MAX_NODES);
   
-  printf("Port number:              %d\n", port);
-  printf("Group list file name:     %s\n", groupListFileName);
-  printf("Log file name:            %s\n", logFileName);
-  printf("Timeout value:            %d\n", timeoutValue);  
-  printf("AYATime:                  %d\n", AYATime);
-  printf("Send failure probability: %d\n", sendFailureProbability);
+  printf("Port number:              %d\n", properties.port);
+  printf("Group list file name:     %s\n", properties.groupListFileName);
+  printf("Log file name:            %s\n", properties.logFileName);
+  printf("Timeout value:            %d\n", properties.timeoutValue);
+  printf("AYATime:                  %d\n", properties.AYATime);
+  printf("Send failure probability: %d\n", properties.sendFailureProbability);
   printf("Some examples of how to format data for shiviz\n");
-  printf("Starting up Node %d\n", port);
+  printf("Starting up Node %d\n", properties.port);
   
-  printf("N%d {\"N%d\" : %d }\n", port, port, myClock++);
+  printf("N%d {\"N%d\" : %d }\n", properties.port, properties.port, properties.myClock++);
   printf("Sending to Node 1\n");
-  printf("N%d {\"N%d\" : %d }\n", port, port, myClock++);
+  printf("N%d {\"N%d\" : %d }\n", properties.port, properties.port, properties.myClock++);
   
   if (err) {
     printf("%d conversion error%sencountered, program exiting.\n",
@@ -128,7 +124,7 @@ int main(int argc, char ** argv) {
     // scale to number between 0 and the 2*AYA time so that 
     // the average value for the timeout is AYA time.
     
-    int sc = rn % (2*AYATime);
+    int sc = rn % (2*properties.AYATime);
     printf("Random number %d is: %d\n", i, sc);
   }
   
@@ -148,7 +144,7 @@ int main(int argc, char ** argv) {
   // Setup my server information 
   memset(&servAddr, 0, sizeof(servAddr)); 
   servAddr.sin_family = AF_INET; 
-  servAddr.sin_port = htons(port);
+  servAddr.sin_port = htons(properties.port);
   // Accept on any of the machine's IP addresses.
   servAddr.sin_addr.s_addr = INADDR_ANY;
   
@@ -199,7 +195,7 @@ int main(int argc, char ** argv) {
 
   memset(&client, 0, sizeof(client));
   //  client.sin_family = AF_INET;
-  // client.sin_port = htons(port);
+  // client.sin_port = htons(properties.port);
   //client.sin_addr.s_addr = INADDR_ANY;
   
   int n; 
@@ -218,7 +214,11 @@ int main(int argc, char ** argv) {
   printf("from %X:%d Size = %d - %s\n",
 	 ntohl(client.sin_addr.s_addr), ntohs(client.sin_port),
 	 n, buff);
-  return 0;
+
+
+  while (properties.state != STOPPED) {
+    state_main(&properties);
+  }
 
   // NOTE to avoid memory leaks you must free the struct returned
   // by getaddrinfo. You will probably want to retrieve the information
@@ -226,5 +226,7 @@ int main(int argc, char ** argv) {
   // Freeing is done with a call to get freeaddrinfo();
 
   freeaddrinfo(serverAddr);
+
+  return 0;
   
 }

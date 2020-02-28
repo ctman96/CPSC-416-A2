@@ -6,7 +6,7 @@ CC=gcc
 CPPFLAGS=
 CFLAGS=-g
 
-NODEOBJS=node.o logger.o
+NODEOBJS=node.o logger.o state_machine.o
 
 node: $(NODEOBJS)
 	$(CC) -o node $(NODEOBJS)  $(CLIBS)
