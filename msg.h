@@ -25,6 +25,7 @@
 */
 
 enum msgKind {
+        INVALID = -1,
         ELECT = 10,
         ANSWER = 11,
         COORD = 12,
