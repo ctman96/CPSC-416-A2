@@ -93,6 +93,8 @@ int main(int argc, char ** argv) {
   properties.vectorClock[7].nodeId = 10;
 
   properties.curElectionId = properties.port * 100000; // Attempt at unique electionIds per node
+  properties.last_AYA = time(NULL);
+  properties.last_IAA = time(NULL);
 
 
   if (init_logger(properties.logFileName) == -1) err++;
@@ -124,6 +126,7 @@ int main(int argc, char ** argv) {
   // replace the call to  time() with an integer.
   srandom(time(0));
   
+
   int i;
   for (i = 0; i < 10; i++) {
     int rn;

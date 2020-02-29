@@ -77,4 +77,6 @@ int log_debug(char* text) {
     }
 
     fprintf(fp, "%s\n", text);
+
+    return 0;
 }

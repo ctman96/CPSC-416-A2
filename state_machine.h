@@ -31,6 +31,9 @@ struct node_properties {
     struct clock vectorClock[MAX_NODES]; // Note: node_properties->vectorClock[0] is to be node's own clock.
 
     int sockfd; // The node's socket descriptor
+
+    unsigned long last_AYA; // epoch timestamp of last AYA send
+    unsigned long last_IAA; // epoch timestamp of last IAA received
 };
 
 struct received_msg {
