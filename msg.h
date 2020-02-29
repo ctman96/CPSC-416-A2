@@ -75,4 +75,21 @@ struct msg {
   struct clock   vectorClock[MAX_NODES];
 };
 
+static char* msgTypeToStr(msgType type) {
+    switch (type) {
+        case ELECT:
+            return "ELECT";
+        case ANSWER:
+            return "ANSWER";
+        case COORD:
+            return "COORD";
+        case AYA:
+            return "AYA";
+        case IAA:
+            return "IAA";
+        default:
+            return "INVALID";
+    }
+}
+
 #endif 

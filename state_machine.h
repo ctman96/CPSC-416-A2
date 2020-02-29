@@ -28,7 +28,7 @@ struct node_properties {
     unsigned long coordinator; // Current coordinator's id
     unsigned int curElectionId; // counter to use for choosing electionId for msg (See msg.h for details, is for debugging only)
 
-    struct clock vectorClock[MAX_NODES];
+    struct clock vectorClock[MAX_NODES]; // Note: node_properties->vectorClock[0] is to be node's own clock.
 
     int sockfd; // The node's socket descriptor
 };

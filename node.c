@@ -77,7 +77,11 @@ int main(int argc, char ** argv) {
     err++;
   }
 
-  for (int i = 0; i < MAX_NODES; i++) {
+  // Our clock is vectorClock[0]
+  properties.vectorClock[0].nodeId = properties.port;
+  properties.vectorClock[0].time = 1;
+  // Initialize all other clocks to empty - TODO load ids from grouplist
+  for (int i = 1; i < MAX_NODES; i++) {
     properties.vectorClock[i].nodeId = -1;
     properties.vectorClock[i].time = 0;
   }
