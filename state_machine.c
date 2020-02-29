@@ -47,14 +47,14 @@ int state_main(struct node_properties* properties) {
  */
 int normal_state(struct node_properties* properties) {
     // TODO
+
+    // Debug / test TODO remove
     struct msg sndmsg;
     sndmsg.msgID = ELECT;
     sndmsg.electionID = properties->curElectionId++;
     memcpy(sndmsg.vectorClock, properties->vectorClock, sizeof(sndmsg.vectorClock));
-
-    // Debug / test TODO remove
     send_message(properties, "localhost", properties->port, &sndmsg);
-    struct msg message = receive_message(properties);
+    struct received_msg receive = receive_message(properties);
 
     properties->state = STOPPED;
 }
@@ -101,56 +101,34 @@ int await_coord_state(struct node_properties* properties) {
 
 // Will attempt to receive a message. Should not be blocking (socket currently created in node.c is set to be non-blocking)
 // If there is no message to receive, returned msg should have msgId of INVALID
-struct msg receive_message(struct node_properties* properties) {
-    struct msg message;
-    message.msgID = INVALID;
+struct received_msg receive_message(struct node_properties* properties) {
+    struct received_msg received_message;
+    received_message.message.msgID = INVALID;
 
-    struct sockaddr_in client;
     int len;
     char  buff[100];
-    memset(&client, 0, sizeof(client));
+    memset(&received_message.client, 0, sizeof(received_message.client));
 
-    int size = recvfrom(properties->sockfd, &message, sizeof(message), 0, (struct sockaddr *) &client, &len);
+    int size = recvfrom(properties->sockfd, &received_message.message, sizeof(received_message.message), 0, (struct sockaddr *) &received_message.client, &len);
 
     if (size == -1 ) {
         if (errno != EAGAIN && errno != EWOULDBLOCK) {
             fprintf(stderr, "Error receiving!");
             // TODO ?
         } else {
-            return message;
+            return received_message;
         }
     } else {
-        // Debug log TODO remove
-        /*char debug_msg[128];
-        sprintf(debug_msg, "Receive_message: (id: %d , election: %d):", message.msgID, message.electionID);
-        log_event(debug_msg, message.msgID, message.vectorClock, MAX_NODES);*/
-
         // Update vector clock
-        // Ignore our clock [0]
-        for (int i = 1;  i < MAX_NODES; i++) {
-            struct clock* current_clock = &properties->vectorClock[i];
-
-            for (int j = 0; j < MAX_NODES; j++) {
-                struct clock* received_clock = &properties->vectorClock[i];
-
-                if (received_clock->nodeId != current_clock->nodeId)
-                    continue;
-
-                if (received_clock->time > current_clock->time)
-                    current_clock->time = received_clock->time;
-
-                break;
-            }
-        }
+        merge_clocks(properties->vectorClock, received_message.message.vectorClock);
 
         // Log receipt
         char lg_msg[128];
-        sprintf(lg_msg, "Receive %s Message: (electionId: %d):", msgTypeToStr(message.msgID), message.electionID);
+        sprintf(lg_msg, "Receive %s Message: (electionId: %d):", msgTypeToStr(received_message.message.msgID), received_message.message.electionID);
         log_event(lg_msg, properties->port, properties->vectorClock, MAX_NODES);
     }
 
-    // TODO: also will want to pass back client address info, so maybe change return type to a wrapper struct
-    return message;
+    return received_message;
 }
 
 int send_message(struct node_properties* properties, char *hostname, unsigned int port, struct msg* message) {
@@ -197,3 +175,23 @@ int register_coordinator(struct node_properties* properties, struct msg* msg) {
     // TODO
 }
 
+
+// Helper to update our clock from a received clock
+void merge_clocks(struct clock our_vector_clock[MAX_NODES],  struct clock received_vector_clock[MAX_NODES]) {
+    // Ignore our clock [0]
+    for (int i = 1;  i < MAX_NODES; i++) {
+        struct clock* current_clock = &our_vector_clock[i];
+
+        for (int j = 0; j < MAX_NODES; j++) {
+            struct clock* received_clock = &received_vector_clock[i];
+
+            if (received_clock->nodeId != current_clock->nodeId)
+                continue;
+
+            if (received_clock->time > current_clock->time)
+                current_clock->time = received_clock->time;
+
+            break;
+        }
+    }
+}
