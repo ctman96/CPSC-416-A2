@@ -40,11 +40,8 @@ int reply_IAA(struct node_properties* properties, struct received_msg* received)
     IAA_msg.msgID = AYA;
     IAA_msg.electionID = received->message.electionID; // the electionID is to be set to the port number of the node sending the AYA
     memcpy(IAA_msg.vectorClock, properties->vectorClock, sizeof(IAA_msg.vectorClock));
-    // TODO: hostname from grouplistfile via electionId?
-    char ip[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &(received->client.sin_addr), ip, INET_ADDRSTRLEN);
-    log_debug(ip); // TODO remove
-    send_message(properties, "localhost", received->message.electionID, &IAA_msg);
+    // TODO: verify received address against grouplist for port Id?
+    send_message(properties, received->message.electionID, &IAA_msg);
 }
 
 int send_AYA(struct node_properties* properties) {
@@ -53,7 +50,7 @@ int send_AYA(struct node_properties* properties) {
     AYA_msg.electionID = (int)properties->port; // the electionID is to be set to the port number of the node sending the AYA
     memcpy(AYA_msg.vectorClock, properties->vectorClock, sizeof(AYA_msg.vectorClock));
     // TODO: coordinator hostname from grouplistfile with properties->coordinator port
-    int n = send_message(properties, "localhost", properties->port, &AYA_msg);
+    int n = send_message(properties, properties->coordinator, &AYA_msg);
     if (n < 0) {
         return  -1; // don't update last_AYA on error
     } else {
@@ -109,7 +106,6 @@ int normal_state(struct node_properties* properties) {
                 return 0;
             }
         }
-        return 0; // TODO remove
     }
 
     // Debug / test TODO remove
@@ -117,7 +113,7 @@ int normal_state(struct node_properties* properties) {
     sndmsg.msgID = ELECT;
     sndmsg.electionID = properties->curElectionId++;
     memcpy(sndmsg.vectorClock, properties->vectorClock, sizeof(sndmsg.vectorClock));
-    send_message(properties, "localhost", properties->port, &sndmsg);
+    send_message(properties, properties->port, &sndmsg);
     struct received_msg receive = receive_message(properties);
     properties->state = STOPPED;
 }
@@ -200,7 +196,7 @@ struct received_msg receive_message(struct node_properties* properties) {
 
     if (size == -1 ) {
         if (errno != EAGAIN && errno != EWOULDBLOCK) {
-            printf("Error receiving!");
+            printf("Error receiving: %s! \n", strerror(errno));
             // TODO ?
         } else {
             return received_message;
@@ -219,21 +215,19 @@ struct received_msg receive_message(struct node_properties* properties) {
 }
 
 
-int send_message(struct node_properties* properties, char *hostname, unsigned int port, struct msg* message) {
+int send_message(struct node_properties* properties, unsigned long node_id_port, struct msg* message) {
 
-    // Setup recipient information
-    struct addrinfo hints, *nodeAddr;
-    nodeAddr = NULL;
+    struct addrinfo* nodeAddr = NULL;
 
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_socktype = SOCK_DGRAM;
-    hints.ai_family = AF_INET;
-    hints.ai_protocol = IPPROTO_UDP;
+    // Get recipient info from group_list
+    for (int i = 0; i < properties->group_list.node_count; i++) {
+        if (properties->group_list.list[i].port == node_id_port) {
+            nodeAddr = properties->group_list.list[i].nodeaddr;
+        }
+    }
 
-    char port_str[16];
-    sprintf(port_str, "%d", port);
-    if (getaddrinfo(hostname, port_str, &hints, &nodeAddr)) {
-        printf("Couldn't lookup hostname\n");
+    if (nodeAddr == NULL) {
+        printf("Cannot find id %d in group list, or address information was not loaded correctly!\n", node_id_port);
         return -1;
     }
 
@@ -242,7 +236,7 @@ int send_message(struct node_properties* properties, char *hostname, unsigned in
 
     // Log Send
     char lg_msg[128];
-    sprintf(lg_msg, "Send %s Message: (electionId: %d):", msgTypeToStr(message->msgID), message->electionID);
+    sprintf(lg_msg, "Send %s Message to N%d: (electionId: %d):", msgTypeToStr(message->msgID), node_id_port, message->electionID);
     log_event(lg_msg, properties->port, properties->vectorClock, MAX_NODES);
 
     // Send message
@@ -250,7 +244,7 @@ int send_message(struct node_properties* properties, char *hostname, unsigned in
     bytesSent = sendto(properties->sockfd, (void *)message, sizeof(*message), 0, // TODO: MSG_CONFIRM if reply??
                        nodeAddr->ai_addr, nodeAddr->ai_addrlen);
     if (bytesSent != sizeof(*message)) {
-        printf("UDP send failed: ");
+        printf("UDP send failed \n");
         return -1;
     }
 
