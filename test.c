@@ -20,6 +20,7 @@
 #include "logger.h"
 #include "state_machine.h"
 
+// Should be mostly just a copy of normal setup code from node.c
 void setup(struct node_properties* test_properties) {
     // Setup socket
     test_properties->port = 12345;
@@ -41,8 +42,45 @@ void setup(struct node_properties* test_properties) {
         exit(EXIT_FAILURE);
     }
 
-    // TODO
+    FILE* fp = fopen("test_group_list.list", "w");
+    fprintf(fp, "localhost 8008\nwww.google.com 12345\nstudents.cs.ubc.ca 98765");
+    fclose(fp);
+
+    load_group_list("test_group_list.list", &test_properties->group_list, test_properties->port);
+
+    // Our clock is vectorClock[0] for some simplicity
+    test_properties->vectorClock[0].nodeId = test_properties->port;
+    test_properties->vectorClock[0].time = 1;
+
+    //  Use group list to initialize vector clocks and determine coordinator
+    int group_list_cursor = 0;
+    test_properties->coordinator = test_properties->port;
+    for (int i = 1; i < MAX_NODES; i++) {
+        // Skip ourselves, since we're [0]
+        if (test_properties->group_list.list[group_list_cursor].port == test_properties->port) {
+            group_list_cursor++;
+        }
+
+        // Initialize other nodes to time 0
+        test_properties->vectorClock[i].nodeId = test_properties->group_list.list[group_list_cursor].port;
+        test_properties->vectorClock[i].time = 0;
+
+        // Set coordinator to highest nodeId
+        if (test_properties->group_list.list[group_list_cursor].port > test_properties->coordinator) {
+            test_properties->coordinator = test_properties->group_list.list[group_list_cursor].port;
+        }
+        group_list_cursor++;
+    }
+
+    test_properties->curElectionId = test_properties->port * 100000; // Attempt at unique electionIds per node
+    test_properties->last_AYA = time(NULL);
+    test_properties->last_IAA = time(NULL);
+
+
 }
+
+
+
 
 int test_group_list() {
     printf("\n======= GROUP_LIST =======\n");
@@ -125,9 +163,49 @@ int test_group_list() {
     return status;
 }
 
+
+
+
 int test_send_message(struct node_properties * test_properties) {
     printf("\n======= SEND_MESSAGE =======\n");
     int status = 0;
+
+    // ------
+    printf("=== Test sending message ===\n");
+    struct msg sndmsg;
+    sndmsg.msgID = ELECT;
+    sndmsg.electionID = 1001;
+    memcpy(sndmsg.vectorClock, test_properties->vectorClock, sizeof(sndmsg.vectorClock));
+    int clock_before = test_properties->vectorClock[0].time;
+    send_message(test_properties, test_properties->port, &sndmsg);
+
+    // Receive message
+    struct sockaddr_in client;
+    int len;
+    char  buff[100];
+    memset(&client, 0, sizeof(client));
+    struct msg message;
+    int size = recvfrom(test_properties->sockfd, &message, sizeof(message), 0, (struct sockaddr *) &client, &len);
+    if (size < 0) {
+        printf("Receiving error");
+        printf("=== Test sending message ===\n");
+        printf("======= SEND_MESSAGE =======\n");
+        return -1;
+    }
+
+    if (message.msgID != sndmsg.msgID || message.electionID != sndmsg.msgID) {
+        printf("Message contents do not match up!\n");
+        status = -1;
+    }
+
+    if (test_properties->vectorClock[0].time != clock_before+1) {
+        printf("Clock was not incremented!\n");
+        status = -1;
+    }
+
+    // TODO
+    printf("=== Test sending message ===\n");
+    // ------
 
     printf("======= SEND_MESSAGE =======\n");
     return status;
@@ -141,6 +219,9 @@ int test_receive_message(struct node_properties * test_properties) {
     return status;
 }
 
+
+
+
 int test_normal_state(struct node_properties * test_properties) {
     printf("\n======= NORMAL_STATE =======\n");
     int status = 0;
@@ -148,6 +229,9 @@ int test_normal_state(struct node_properties * test_properties) {
     printf("======= NORMAL_STATE =======\n");
     return status;
 }
+
+
+
 
 int test_aya_state(struct node_properties * test_properties) {
     printf("\n======= AYA_STATE =======\n");
@@ -157,9 +241,13 @@ int test_aya_state(struct node_properties * test_properties) {
     return status;
 }
 
+
+
+
 int test() {
     printf("\n=========\n TESTING \n=========\n");
 
+    // Test group list first, since need it for setup
     int gl = test_group_list();
 
     // Setup properties

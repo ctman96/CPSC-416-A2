@@ -39,7 +39,6 @@ int reply_IAA(struct node_properties* properties, struct received_msg* received)
     struct msg IAA_msg;
     IAA_msg.msgID = AYA;
     IAA_msg.electionID = received->message.electionID; // the electionID is to be set to the port number of the node sending the AYA
-    memcpy(IAA_msg.vectorClock, properties->vectorClock, sizeof(IAA_msg.vectorClock));
     // TODO: verify port is in group list and same address info?
     send_message(properties, received->message.electionID, &IAA_msg);
 }
@@ -48,7 +47,6 @@ int send_AYA(struct node_properties* properties) {
     struct msg AYA_msg;
     AYA_msg.msgID = AYA;
     AYA_msg.electionID = (int)properties->port; // the electionID is to be set to the port number of the node sending the AYA
-    memcpy(AYA_msg.vectorClock, properties->vectorClock, sizeof(AYA_msg.vectorClock));
     int n = send_message(properties, properties->coordinator, &AYA_msg);
     if (n < 0) {
         return  -1; // don't update last_AYA on error
@@ -113,7 +111,6 @@ int normal_state(struct node_properties* properties) {
     struct msg sndmsg;
     sndmsg.msgID = ELECT;
     sndmsg.electionID = properties->curElectionId++;
-    memcpy(sndmsg.vectorClock, properties->vectorClock, sizeof(sndmsg.vectorClock));
     send_message(properties, properties->port, &sndmsg);
     struct received_msg receive = receive_message(properties);
     properties->state = STOPPED;
@@ -263,8 +260,9 @@ int send_message(struct node_properties* properties, unsigned long node_id_port,
         return -1;
     }
 
-    // Increment our clock
+    // Increment our clock and add to msg
     properties->vectorClock[0].time++;
+    memcpy(message->vectorClock, properties->vectorClock, sizeof(message->vectorClock));
 
     // Log Send
     char lg_msg[128];
@@ -296,7 +294,6 @@ int reply_answer(struct node_properties* properties, struct received_msg* receiv
     struct msg ANSWER_msg;
     ANSWER_msg.msgID = ANSWER;
     ANSWER_msg.electionID = received->message.electionID;
-    memcpy(ANSWER_msg.vectorClock, properties->vectorClock, sizeof(ANSWER_msg.vectorClock));
     // TODO: verify port is in group list and same address info??
     return send_message(properties, ntohs(received->client.sin_port), &ANSWER_msg);
 }
