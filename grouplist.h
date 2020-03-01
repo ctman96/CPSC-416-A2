@@ -18,7 +18,7 @@ struct group_list {
     struct node_info list[MAX_NODES];
 };
 
-int load_group_list(char* groupListFile, struct group_list* group_list);
+int load_group_list(char* groupListFile, struct group_list* group_list, unsigned long our_port);
 
 
 #endif //A2_GROUPLIST_H

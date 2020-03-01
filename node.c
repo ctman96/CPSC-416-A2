@@ -78,16 +78,7 @@ int main(int argc, char ** argv) {
     err++;
   }
 
-  if (init_logger(properties.logFileName) == -1) err++;
-
-  if (load_group_list(properties.groupListFileName, &properties.group_list) < 0) {
-    printf("Error loading group list!\n");
-    err++;
-  }
-
-  log_debug("Testing Testing");
-  log_event("Started N3", 3, properties.vectorClock, MAX_NODES);
-  
+  /*
   printf("Port number:              %d\n", properties.port);
   printf("Group list file name:     %s\n", properties.groupListFileName);
   printf("Log file name:            %s\n", properties.logFileName);
@@ -100,10 +91,21 @@ int main(int argc, char ** argv) {
   printf("N%d {\"N%d\" : %d }\n", properties.port, properties.port, 1);
   printf("Sending to Node 1\n");
   printf("N%d {\"N%d\" : %d }\n", properties.port, properties.port, 2);
+   */
   
   if (err) {
     printf("%d conversion error%sencountered, program exiting.\n",
 	   err, err>1? "s were ": " was ");
+    return -1;
+  }
+
+  if (init_logger(properties.logFileName) == -1) {
+    printf("Unable to initialize logger, program exiting. \n");
+    return -1;
+  }
+
+  if (load_group_list(properties.groupListFileName, &properties.group_list, properties.port) < 0) {
+    printf("Unable to load group list!\n");
     return -1;
   }
 
@@ -134,6 +136,9 @@ int main(int argc, char ** argv) {
   properties.curElectionId = properties.port * 100000; // Attempt at unique electionIds per node
   properties.last_AYA = time(NULL);
   properties.last_IAA = time(NULL);
+
+  // Log startup
+  log_event("Started N3", 3, properties.vectorClock, MAX_NODES);
 
 
   // If you want to produce a repeatable sequence of "random" numbers
