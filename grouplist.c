@@ -13,7 +13,7 @@
 
 #include "grouplist.h"
 
-int load_group_list(char* groupListFile, struct group_list* group_list) {
+int load_group_list(char* groupListFile, struct group_list* group_list, unsigned long our_port) {
     group_list->node_count = 0;
 
     FILE* fp;
@@ -33,6 +33,7 @@ int load_group_list(char* groupListFile, struct group_list* group_list) {
     char *line_buffer = NULL;
     size_t buffer_size = 0;
     ssize_t line_size;
+    int found_self = -1;
 
     // Read all lines
     line_size =  getline(&line_buffer, &buffer_size, fp);
@@ -48,7 +49,7 @@ int load_group_list(char* groupListFile, struct group_list* group_list) {
         char *port = strtok(NULL, " ");
         // Check for invalid data / failed parsing
         if (node_info->hostname == NULL || port == NULL) {
-            printf("Error parsing groupListFile, line %d: %s \n", group_list->node_count, line_buffer);
+            printf("Error parsing group list, line %d: %s \n", group_list->node_count, line_buffer);
             free(line_buffer);
             fclose(fp);
             return -1;
@@ -57,10 +58,15 @@ int load_group_list(char* groupListFile, struct group_list* group_list) {
         char * end;
         node_info->port = strtoul(port, &end, 10);
         if (port == end) {
-            printf("Port conversion error: %s\n", port);
+            printf("group list port conversion error: %s\n", port);
             free(line_buffer);
             fclose(fp);
             return -1;
+        }
+
+        // Check for self
+        if (node_info->port == our_port) {
+            found_self = 1;
         }
 
         // Load address info
@@ -91,5 +97,11 @@ int load_group_list(char* groupListFile, struct group_list* group_list) {
 
     free(line_buffer);
     fclose(fp);
+
+    if (found_self == -1) {
+        printf("Error: didn't find own port in goup list file!\n");
+        return -1;
+    }
+
     return 0;
 }

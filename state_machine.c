@@ -271,6 +271,14 @@ int send_message(struct node_properties* properties, unsigned long node_id_port,
     sprintf(lg_msg, "Send %s Message to N%d: (electionId: %d):", msgTypeToStr(message->msgID), node_id_port, message->electionID);
     log_event(lg_msg, properties->port, properties->vectorClock, MAX_NODES);
 
+    // Check if packet should be "dropped"
+    int rn = random();
+    int sc = rn % 99;
+    if (sc < properties->sendFailureProbability) {
+        log_debug("Debug: Message dropped");
+        return 0;
+    }
+
     // Send message
     int bytesSent;
     bytesSent = sendto(properties->sockfd, (void *)message, sizeof(*message), 0, // TODO: MSG_CONFIRM if reply??
