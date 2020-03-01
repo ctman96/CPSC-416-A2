@@ -8,7 +8,7 @@
 #include "msg.h"
 
 struct node_info {
-    char * hostname;
+    char hostname[256];
     unsigned long port;
     struct addrinfo *nodeaddr;
 };

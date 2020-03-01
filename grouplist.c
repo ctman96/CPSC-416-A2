@@ -18,7 +18,7 @@ int load_group_list(char* groupListFile, struct group_list* group_list, unsigned
 
     FILE* fp;
     // On "-" read from stdin
-    if (groupListFile == "-") {
+    if (strcmp(groupListFile, "-") == 0) {
         fp = stdin;
     } else {
         fp = fopen(groupListFile, "r");
@@ -45,13 +45,14 @@ int load_group_list(char* groupListFile, struct group_list* group_list, unsigned
         strcpy(line_cpy, line_buffer);
 
         // Split by delimiter (whitespace)
-        node_info->hostname = strtok(line_cpy, " ");
+        char* host = strtok(line_cpy, " ");
+        strcpy(node_info->hostname , host);
         char *port = strtok(NULL, " ");
         // Check for invalid data / failed parsing
         if (node_info->hostname == NULL || port == NULL) {
             printf("Error parsing group list, line %d: %s \n", group_list->node_count, line_buffer);
             free(line_buffer);
-            fclose(fp);
+            if (fp != stdin) fclose(fp);
             return -1;
         }
         // Attempt to convert port to number
@@ -60,7 +61,7 @@ int load_group_list(char* groupListFile, struct group_list* group_list, unsigned
         if (port == end) {
             printf("group list port conversion error: %s\n", port);
             free(line_buffer);
-            fclose(fp);
+            if (fp != stdin) fclose(fp);
             return -1;
         }
 
@@ -83,20 +84,19 @@ int load_group_list(char* groupListFile, struct group_list* group_list, unsigned
         if (getaddrinfo(node_info->hostname, port_str, &hints, &node_info->nodeaddr)) {
             printf("Couldn't lookup hostname: %s %s\n", node_info->hostname, port);
             free(line_buffer);
-            fclose(fp);
+            if (fp != stdin) fclose(fp);
             return -1;
         }
 
         struct sockaddr_in *addr;
         addr = (struct sockaddr_in *)node_info->nodeaddr;
-        char ip[INET_ADDRSTRLEN];
         printf("Group List - Loaded node: %s %d %s \n", node_info->hostname, node_info->port, inet_ntoa((struct in_addr)addr->sin_addr));
 
         line_size = getline(&line_buffer, &buffer_size, fp);
     }
 
     free(line_buffer);
-    fclose(fp);
+    if (fp != stdin) fclose(fp);
 
     if (found_self == -1) {
         printf("Error: didn't find own port in goup list file!\n");

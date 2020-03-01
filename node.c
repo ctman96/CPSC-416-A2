@@ -16,6 +16,7 @@
 #include "logger.h"
 #include "grouplist.h"
 #include "state_machine.h"
+#include "test.h"
 
 
 // The purpose of this file is to provide insight into how to make various library
@@ -39,7 +40,7 @@ int main(int argc, char ** argv) {
   struct node_properties properties;
   properties.state = NORMAL_STATE;
 
-  if (argc != 7) {
+  if (argc != 7 && argc != 8) {
     usage(argv[0]);
     return -1;
   }
@@ -73,7 +74,7 @@ int main(int argc, char ** argv) {
   }
 
   properties.sendFailureProbability  = strtoul(argv[6], &end, 10);
-  if (argv[5] == end) {
+  if (argv[6] == end) {
     printf("sendFailureProbability conversion error\n");
     err++;
   }
@@ -102,6 +103,11 @@ int main(int argc, char ** argv) {
   if (init_logger(properties.logFileName) == -1) {
     printf("Unable to initialize logger, program exiting. \n");
     return -1;
+  }
+
+  // Perform tests and return
+  if ( argc == 8 ) {
+    return test();
   }
 
   if (load_group_list(properties.groupListFileName, &properties.group_list, properties.port) < 0) {
