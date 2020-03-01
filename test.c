@@ -23,7 +23,7 @@
 // Should be mostly just a copy of normal setup code from node.c
 void setup(struct node_properties* test_properties) {
     // Setup socket
-    test_properties->port = 12345;
+    test_properties->port = 8008;
     struct sockaddr_in servAddr;
     if ( (test_properties->sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
         perror("socket creation failed");
@@ -170,6 +170,11 @@ int test_send_message(struct node_properties * test_properties) {
     printf("\n======= SEND_MESSAGE =======\n");
     int status = 0;
 
+    struct sockaddr_in client;
+    int len;
+    char  buff[100];
+    memset(&client, 0, sizeof(client));
+
     // ------
     printf("=== Test sending message ===\n");
     struct msg sndmsg;
@@ -177,15 +182,16 @@ int test_send_message(struct node_properties * test_properties) {
     sndmsg.electionID = 1001;
     memcpy(sndmsg.vectorClock, test_properties->vectorClock, sizeof(sndmsg.vectorClock));
     int clock_before = test_properties->vectorClock[0].time;
-    send_message(test_properties, test_properties->port, &sndmsg);
+    if (send_message(test_properties, test_properties->port, &sndmsg) < 0) {
+        printf("send_message failed unexpectedly!\n");
+        printf("=== Test sending message ===\n");
+        printf("======= SEND_MESSAGE =======\n");
+        return -1;
+    }
 
     // Receive message
-    struct sockaddr_in client;
-    int len;
-    char  buff[100];
-    memset(&client, 0, sizeof(client));
-    struct msg message;
-    int size = recvfrom(test_properties->sockfd, &message, sizeof(message), 0, (struct sockaddr *) &client, &len);
+    struct msg rcvmessage;
+    int size = recvfrom(test_properties->sockfd, &rcvmessage, sizeof(rcvmessage), 0, (struct sockaddr *) &client, &len);
     if (size < 0) {
         printf("Receiving error");
         printf("=== Test sending message ===\n");
@@ -193,7 +199,11 @@ int test_send_message(struct node_properties * test_properties) {
         return -1;
     }
 
-    if (message.msgID != sndmsg.msgID || message.electionID != sndmsg.msgID) {
+    if (rcvmessage.msgID == INVALID) {
+        printf("Error receiving message!\n");
+    }
+
+    if (rcvmessage.msgID != sndmsg.msgID || rcvmessage.electionID != sndmsg.electionID) {
         printf("Message contents do not match up!\n");
         status = -1;
     }
@@ -210,6 +220,9 @@ int test_send_message(struct node_properties * test_properties) {
     printf("======= SEND_MESSAGE =======\n");
     return status;
 }
+
+
+
 
 int test_receive_message(struct node_properties * test_properties) {
     printf("\n======= RECEIVE_MESSAGE =======\n");
@@ -260,7 +273,7 @@ int test() {
     int aya = test_aya_state(&test_properties);
 
     if (gl + snd + rcv + nrm + aya < 0) {
-        printf("Tests failed!\n");
+        printf("\nTests failed!\n");
         printf("========= TESTING =========\n");
         return -1;
     }
