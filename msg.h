@@ -25,6 +25,7 @@
 */
 
 enum msgKind {
+        INVALID = -1,
         ELECT = 10,
         ANSWER = 11,
         COORD = 12,
@@ -73,5 +74,22 @@ struct msg {
   unsigned int   electionID;
   struct clock   vectorClock[MAX_NODES];
 };
+
+static char* msgTypeToStr(msgType type) {
+    switch (type) {
+        case ELECT:
+            return "ELECT";
+        case ANSWER:
+            return "ANSWER";
+        case COORD:
+            return "COORD";
+        case AYA:
+            return "AYA";
+        case IAA:
+            return "IAA";
+        default:
+            return "INVALID";
+    }
+}
 
 #endif 

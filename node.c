@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <time.h>
 #include <netdb.h>
+#include <fcntl.h>
 
 #include "msg.h"
 #include "logger.h"
@@ -76,7 +77,11 @@ int main(int argc, char ** argv) {
     err++;
   }
 
-  for (int i = 0; i < MAX_NODES; i++) {
+  // Our clock is vectorClock[0]
+  properties.vectorClock[0].nodeId = properties.port;
+  properties.vectorClock[0].time = 1;
+  // Initialize all other clocks to empty - TODO load ids from grouplist
+  for (int i = 1; i < MAX_NODES; i++) {
     properties.vectorClock[i].nodeId = -1;
     properties.vectorClock[i].time = 0;
   }
@@ -86,6 +91,11 @@ int main(int argc, char ** argv) {
   properties.vectorClock[5].nodeId = 4;
   properties.vectorClock[5].time = 6;
   properties.vectorClock[7].nodeId = 10;
+
+  properties.curElectionId = properties.port * 100000; // Attempt at unique electionIds per node
+  properties.last_AYA = time(NULL);
+  properties.last_IAA = time(NULL);
+
 
   if (init_logger(properties.logFileName) == -1) err++;
 
@@ -116,6 +126,7 @@ int main(int argc, char ** argv) {
   // replace the call to  time() with an integer.
   srandom(time(0));
   
+
   int i;
   for (i = 0; i < 10; i++) {
     int rn;
@@ -130,16 +141,20 @@ int main(int argc, char ** argv) {
   
   
   // This is some sample code to setup a UDP socket for sending and receiving.
-  int sockfd;
   struct sockaddr_in servAddr;
 
   // Create the socket
   // The following must be one of the parameters don't leave this as it is
   
-  if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
+  if ( (properties.sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
     perror("socket creation failed"); 
     exit(EXIT_FAILURE); 
-  } 
+  }
+
+  // Set socket as non-blocking
+  int flags = fcntl(properties.sockfd, F_GETFL);
+  flags |= O_NONBLOCK;
+  fcntl(properties.sockfd, F_SETFL, flags);
 
   // Setup my server information 
   memset(&servAddr, 0, sizeof(servAddr)); 
@@ -149,7 +164,7 @@ int main(int argc, char ** argv) {
   servAddr.sin_addr.s_addr = INADDR_ANY;
   
   // Bind the socket to the requested addresses and port 
-  if ( bind(sockfd, (const struct sockaddr *)&servAddr,  
+  if ( bind(properties.sockfd, (const struct sockaddr *)&servAddr,
             sizeof(servAddr)) < 0 )  { 
     perror("bind failed"); 
     exit(EXIT_FAILURE); 
@@ -180,7 +195,7 @@ int main(int argc, char ** argv) {
 
   // Send the message to ourselves
   int bytesSent;
-  bytesSent = sendto(sockfd, (const char *) msg, strlen(msg), MSG_CONFIRM,
+  bytesSent = sendto(properties.sockfd, (const char *) msg, strlen(msg), MSG_CONFIRM,
 		     serverAddr->ai_addr, serverAddr->ai_addrlen);
   if (bytesSent != strlen(msg)) {
     perror("UDP send failed: ");
@@ -199,7 +214,7 @@ int main(int argc, char ** argv) {
   //client.sin_addr.s_addr = INADDR_ANY;
   
   int n; 
-  n = recvfrom(sockfd, buff, 100, MSG_WAITALL, 
+  n = recvfrom(properties.sockfd, buff, 100, MSG_WAITALL,
 	       (struct sockaddr *) &client, &len);
 
   // client will point to the address info of the node
@@ -215,7 +230,7 @@ int main(int argc, char ** argv) {
 	 ntohl(client.sin_addr.s_addr), ntohs(client.sin_port),
 	 n, buff);
 
-
+  // Main state loop
   while (properties.state != STOPPED) {
     state_main(&properties);
   }
