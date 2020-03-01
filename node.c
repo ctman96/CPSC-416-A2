@@ -14,6 +14,7 @@
 
 #include "msg.h"
 #include "logger.h"
+#include "grouplist.h"
 #include "state_machine.h"
 
 
@@ -77,31 +78,7 @@ int main(int argc, char ** argv) {
     err++;
   }
 
-  // Our clock is vectorClock[0]
-  properties.vectorClock[0].nodeId = properties.port;
-  properties.vectorClock[0].time = 1;
-  // Initialize all other clocks to empty - TODO load ids from grouplist
-  for (int i = 1; i < MAX_NODES; i++) {
-    properties.vectorClock[i].nodeId = -1;
-    properties.vectorClock[i].time = 0;
-  }
-  // TODO load groupListFile
-  properties.vectorClock[1].nodeId = 9;
-  properties.vectorClock[1].time = 5;
-  properties.vectorClock[5].nodeId = 4;
-  properties.vectorClock[5].time = 6;
-  properties.vectorClock[7].nodeId = 10;
-
-  properties.curElectionId = properties.port * 100000; // Attempt at unique electionIds per node
-  properties.last_AYA = time(NULL);
-  properties.last_IAA = time(NULL);
-
-
-  if (init_logger(properties.logFileName) == -1) err++;
-
-  log_debug("Testing Testing");
-  log_event("Started N3", 3, properties.vectorClock, MAX_NODES);
-  
+  /*
   printf("Port number:              %d\n", properties.port);
   printf("Group list file name:     %s\n", properties.groupListFileName);
   printf("Log file name:            %s\n", properties.logFileName);
@@ -114,6 +91,7 @@ int main(int argc, char ** argv) {
   printf("N%d {\"N%d\" : %d }\n", properties.port, properties.port, 1);
   printf("Sending to Node 1\n");
   printf("N%d {\"N%d\" : %d }\n", properties.port, properties.port, 2);
+   */
   
   if (err) {
     printf("%d conversion error%sencountered, program exiting.\n",
@@ -121,7 +99,48 @@ int main(int argc, char ** argv) {
     return -1;
   }
 
-  
+  if (init_logger(properties.logFileName) == -1) {
+    printf("Unable to initialize logger, program exiting. \n");
+    return -1;
+  }
+
+  if (load_group_list(properties.groupListFileName, &properties.group_list, properties.port) < 0) {
+    printf("Unable to load group list!\n");
+    return -1;
+  }
+
+  // Our clock is vectorClock[0] for some simplicity
+  properties.vectorClock[0].nodeId = properties.port;
+  properties.vectorClock[0].time = 1;
+
+  //  Use group list to initialize vector clocks and determine coordinator
+  int group_list_cursor = 0;
+  properties.coordinator = properties.port;
+  for (int i = 1; i < MAX_NODES; i++) {
+    // Skip ourselves, since we're [0]
+    if (properties.group_list.list[group_list_cursor].port == properties.port) {
+      group_list_cursor++;
+    }
+
+    // Initialize other nodes to time 0
+    properties.vectorClock[i].nodeId = properties.group_list.list[group_list_cursor].port;
+    properties.vectorClock[i].time = 0;
+
+    // Set coordinator to highest nodeId
+    if (properties.group_list.list[group_list_cursor].port > properties.coordinator) {
+      properties.coordinator = properties.group_list.list[group_list_cursor].port;
+    }
+    group_list_cursor++;
+  }
+
+  properties.curElectionId = properties.port * 100000; // Attempt at unique electionIds per node
+  properties.last_AYA = time(NULL);
+  properties.last_IAA = time(NULL);
+
+  // Log startup
+  log_event("Started N3", 3, properties.vectorClock, MAX_NODES);
+
+
   // If you want to produce a repeatable sequence of "random" numbers
   // replace the call to  time() with an integer.
   srandom(time(0));
@@ -229,6 +248,10 @@ int main(int argc, char ** argv) {
   printf("from %X:%d Size = %d - %s\n",
 	 ntohl(client.sin_addr.s_addr), ntohs(client.sin_port),
 	 n, buff);
+
+  // TODO: What needs to be done on startup?
+  // Coordinator -> Send coord?
+  // Others -> ??  Guessing nothing, since if they can't reach the original coordinator they'll call an election
 
   // Main state loop
   while (properties.state != STOPPED) {

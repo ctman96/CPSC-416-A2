@@ -40,11 +40,8 @@ int reply_IAA(struct node_properties* properties, struct received_msg* received)
     IAA_msg.msgID = AYA;
     IAA_msg.electionID = received->message.electionID; // the electionID is to be set to the port number of the node sending the AYA
     memcpy(IAA_msg.vectorClock, properties->vectorClock, sizeof(IAA_msg.vectorClock));
-    // TODO: hostname from grouplistfile via electionId?
-    char ip[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &(received->client.sin_addr), ip, INET_ADDRSTRLEN);
-    log_debug(ip); // TODO remove
-    send_message(properties, "localhost", received->message.electionID, &IAA_msg);
+    // TODO: verify port is in group list and same address info?
+    send_message(properties, received->message.electionID, &IAA_msg);
 }
 
 int send_AYA(struct node_properties* properties) {
@@ -52,8 +49,7 @@ int send_AYA(struct node_properties* properties) {
     AYA_msg.msgID = AYA;
     AYA_msg.electionID = (int)properties->port; // the electionID is to be set to the port number of the node sending the AYA
     memcpy(AYA_msg.vectorClock, properties->vectorClock, sizeof(AYA_msg.vectorClock));
-    // TODO: coordinator hostname from grouplistfile with properties->coordinator port
-    int n = send_message(properties, "localhost", properties->port, &AYA_msg);
+    int n = send_message(properties, properties->coordinator, &AYA_msg);
     if (n < 0) {
         return  -1; // don't update last_AYA on error
     } else {
@@ -80,11 +76,12 @@ int normal_state(struct node_properties* properties) {
 
     switch(received.message.msgID) {
         case ELECT:
-            reply_answer(properties, &received.message);
+            reply_answer(properties, &received);
+            properties->curElectionId++;
             properties->state = ELECT_STATE;
             return 0;
         case COORD:
-            register_coordinator(properties, &received.message);
+            register_coordinator(properties, &received);
             break;
         case AYA:
             // If coordinator, reply to AYA messages
@@ -99,6 +96,7 @@ int normal_state(struct node_properties* properties) {
     // If we're not the coordinator,send AYA messages to coordinator
     if (properties->coordinator != properties->port) {
         // If AYATime seconds have passed since last IAA received, send a new AYA
+        // TODO: is this supposed to be random like in the example code
         if (time(NULL) - properties->last_IAA > properties->AYATime) {
             int n = send_AYA(properties);
             if (n < 0) {
@@ -109,7 +107,6 @@ int normal_state(struct node_properties* properties) {
                 return 0;
             }
         }
-        return 0; // TODO remove
     }
 
     // Debug / test TODO remove
@@ -117,7 +114,7 @@ int normal_state(struct node_properties* properties) {
     sndmsg.msgID = ELECT;
     sndmsg.electionID = properties->curElectionId++;
     memcpy(sndmsg.vectorClock, properties->vectorClock, sizeof(sndmsg.vectorClock));
-    send_message(properties, "localhost", properties->port, &sndmsg);
+    send_message(properties, properties->port, &sndmsg);
     struct received_msg receive = receive_message(properties);
     properties->state = STOPPED;
 }
@@ -128,15 +125,41 @@ int normal_state(struct node_properties* properties) {
 
 /*
     Receive IAA -> Normal state
-    reach AYA time = Coordinator failure detected -> Election State
+    reach timeout = Coordinator failure detected -> Election State
     ELECT message received- > Reply ANSWER message  -> Election State
     Receive COORD message -> register new coordinator
  */
 int aya_state(struct node_properties* properties) {
-    properties->state = STOPPED;
-    // TODO
-    // TODO use properties->last_AYA to determine timeout
-    // TODO ensure update properties->last_IAA when received
+
+    // Check for message
+    struct received_msg received = receive_message(properties);
+
+    switch(received.message.msgID) {
+        case ELECT:
+            reply_answer(properties, &received);
+            properties->curElectionId++;
+            properties->state = ELECT_STATE;
+            return 0;
+        case COORD:
+            register_coordinator(properties, &received);
+            properties->state = NORMAL_STATE;
+            return 0;
+        case IAA:
+            properties->last_IAA = time(NULL);
+            properties->state = NORMAL_STATE;
+            return 0;
+        default:
+            break;
+    }
+
+    // If timeout, coordinator failure detected
+    if (time(NULL) - properties->last_AYA > properties->timeoutValue) {
+        properties->curElectionId++;
+        properties->state = ELECT_STATE;
+        return 0;
+    }
+
+    return 0;
 }
 
 
@@ -154,6 +177,7 @@ int aya_state(struct node_properties* properties) {
 int elect_state(struct node_properties* properties) {
     properties->state = STOPPED;
     // TODO
+    return 0;
 }
 
 
@@ -167,7 +191,9 @@ int elect_state(struct node_properties* properties) {
     Receive COORD message -> register new coordinator -> Normal state
  */
 int await_answer_state(struct node_properties* properties) {
+    properties->state = STOPPED;
     // TODO
+    return 0;
 }
 
 
@@ -179,7 +205,9 @@ int await_answer_state(struct node_properties* properties) {
     Timeout if a COORD message isn't received within ((MAX_NODES + 1) timeout value
  */
 int await_coord_state(struct node_properties* properties) {
+    properties->state = STOPPED;
     // TODO
+    return 0;
 }
 
 
@@ -200,7 +228,7 @@ struct received_msg receive_message(struct node_properties* properties) {
 
     if (size == -1 ) {
         if (errno != EAGAIN && errno != EWOULDBLOCK) {
-            printf("Error receiving!");
+            printf("Error receiving: %s! \n", strerror(errno));
             // TODO ?
         } else {
             return received_message;
@@ -219,21 +247,19 @@ struct received_msg receive_message(struct node_properties* properties) {
 }
 
 
-int send_message(struct node_properties* properties, char *hostname, unsigned int port, struct msg* message) {
+int send_message(struct node_properties* properties, unsigned long node_id_port, struct msg* message) {
 
-    // Setup recipient information
-    struct addrinfo hints, *nodeAddr;
-    nodeAddr = NULL;
+    struct addrinfo* nodeAddr = NULL;
 
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_socktype = SOCK_DGRAM;
-    hints.ai_family = AF_INET;
-    hints.ai_protocol = IPPROTO_UDP;
+    // Get recipient info from group_list
+    for (int i = 0; i < properties->group_list.node_count; i++) {
+        if (properties->group_list.list[i].port == node_id_port) {
+            nodeAddr = properties->group_list.list[i].nodeaddr;
+        }
+    }
 
-    char port_str[16];
-    sprintf(port_str, "%d", port);
-    if (getaddrinfo(hostname, port_str, &hints, &nodeAddr)) {
-        printf("Couldn't lookup hostname\n");
+    if (nodeAddr == NULL) {
+        printf("Cannot find id %d in group list, or address information was not loaded correctly!\n", node_id_port);
         return -1;
     }
 
@@ -242,15 +268,23 @@ int send_message(struct node_properties* properties, char *hostname, unsigned in
 
     // Log Send
     char lg_msg[128];
-    sprintf(lg_msg, "Send %s Message: (electionId: %d):", msgTypeToStr(message->msgID), message->electionID);
+    sprintf(lg_msg, "Send %s Message to N%d: (electionId: %d):", msgTypeToStr(message->msgID), node_id_port, message->electionID);
     log_event(lg_msg, properties->port, properties->vectorClock, MAX_NODES);
+
+    // Check if packet should be "dropped"
+    int rn = random();
+    int sc = rn % 99;
+    if (sc < properties->sendFailureProbability) {
+        log_debug("Debug: Message dropped");
+        return 0;
+    }
 
     // Send message
     int bytesSent;
     bytesSent = sendto(properties->sockfd, (void *)message, sizeof(*message), 0, // TODO: MSG_CONFIRM if reply??
                        nodeAddr->ai_addr, nodeAddr->ai_addrlen);
     if (bytesSent != sizeof(*message)) {
-        printf("UDP send failed: ");
+        printf("UDP send failed \n");
         return -1;
     }
 
@@ -258,13 +292,19 @@ int send_message(struct node_properties* properties, char *hostname, unsigned in
 }
 
 
-int reply_answer(struct node_properties* properties, struct msg* msg) {
-    // TODO
+int reply_answer(struct node_properties* properties, struct received_msg* received) {
+    struct msg ANSWER_msg;
+    ANSWER_msg.msgID = ANSWER;
+    ANSWER_msg.electionID = received->message.electionID;
+    memcpy(ANSWER_msg.vectorClock, properties->vectorClock, sizeof(ANSWER_msg.vectorClock));
+    // TODO: verify port is in group list and same address info??
+    return send_message(properties, ntohs(received->client.sin_port), &ANSWER_msg);
 }
 
 
-int register_coordinator(struct node_properties* properties, struct msg* msg) {
-    // TODO
+int register_coordinator(struct node_properties* properties, struct received_msg* received) {
+    properties->coordinator = ntohs(received->client.sin_port);
+    return 0;
 }
 
 
