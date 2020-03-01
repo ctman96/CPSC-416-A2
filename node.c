@@ -78,27 +78,12 @@ int main(int argc, char ** argv) {
     err++;
   }
 
-  // Our clock is vectorClock[0]
-  properties.vectorClock[0].nodeId = properties.port;
-  properties.vectorClock[0].time = 1;
-  // Initialize all other clocks to empty - TODO load ids from grouplist
-  for (int i = 1; i < MAX_NODES; i++) {
-    properties.vectorClock[i].nodeId = -1;
-    properties.vectorClock[i].time = 0;
-  }
-  // TODO load groupListFile
-  properties.vectorClock[1].nodeId = 9;
-  properties.vectorClock[1].time = 5;
-  properties.vectorClock[5].nodeId = 4;
-  properties.vectorClock[5].time = 6;
-  properties.vectorClock[7].nodeId = 10;
-
-  properties.curElectionId = properties.port * 100000; // Attempt at unique electionIds per node
-  properties.last_AYA = time(NULL);
-  properties.last_IAA = time(NULL);
-
-
   if (init_logger(properties.logFileName) == -1) err++;
+
+  if (load_group_list(properties.groupListFileName, &properties.group_list) < 0) {
+    printf("Error loading group list!\n");
+    err++;
+  }
 
   log_debug("Testing Testing");
   log_event("Started N3", 3, properties.vectorClock, MAX_NODES);
@@ -122,7 +107,35 @@ int main(int argc, char ** argv) {
     return -1;
   }
 
-  
+  // Our clock is vectorClock[0] for some simplicity
+  properties.vectorClock[0].nodeId = properties.port;
+  properties.vectorClock[0].time = 1;
+
+  //  Use group list to initialize vector clocks and determine coordinator
+  int group_list_cursor = 0;
+  properties.coordinator = properties.port;
+  for (int i = 1; i < MAX_NODES; i++) {
+    // Skip ourselves, since we're [0]
+    if (properties.group_list.list[group_list_cursor].port == properties.port) {
+      group_list_cursor++;
+    }
+
+    // Initialize other nodes to time 0
+    properties.vectorClock[i].nodeId = properties.group_list.list[group_list_cursor].port;
+    properties.vectorClock[i].time = 0;
+
+    // Set coordinator to highest nodeId
+    if (properties.group_list.list[group_list_cursor].port > properties.coordinator) {
+      properties.coordinator = properties.group_list.list[group_list_cursor].port;
+    }
+    group_list_cursor++;
+  }
+
+  properties.curElectionId = properties.port * 100000; // Attempt at unique electionIds per node
+  properties.last_AYA = time(NULL);
+  properties.last_IAA = time(NULL);
+
+
   // If you want to produce a repeatable sequence of "random" numbers
   // replace the call to  time() with an integer.
   srandom(time(0));

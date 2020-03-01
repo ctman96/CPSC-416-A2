@@ -27,21 +27,25 @@ int load_group_list(char* groupListFile, struct group_list* group_list) {
     // If error loading, return error
     if (!fp) {
         printf("Unable to open groupListFile: %s \n", groupListFile);
-        fclose(fp);
         return -1;
     }
 
     char *line_buffer = NULL;
     size_t buffer_size = 0;
+    ssize_t line_size;
 
     // Read all lines
-    while( getline(&line_buffer, &buffer_size, fp) >= 0 ) {
+    line_size =  getline(&line_buffer, &buffer_size, fp);
+    while( line_size >= 0 ) {
         struct node_info* node_info = &group_list->list[group_list->node_count];
         group_list->node_count++;
 
+        char line_cpy[line_size];
+        strcpy(line_cpy, line_buffer);
+
         // Split by delimiter (whitespace)
-        node_info->hostname = strtok(line_buffer, " ");
-        char *port = strtok(line_buffer, " ");
+        node_info->hostname = strtok(line_cpy, " ");
+        char *port = strtok(NULL, " ");
         // Check for invalid data / failed parsing
         if (node_info->hostname == NULL || port == NULL) {
             printf("Error parsing groupListFile, line %d: %s \n", group_list->node_count, line_buffer);
@@ -68,12 +72,21 @@ int load_group_list(char* groupListFile, struct group_list* group_list) {
         hints.ai_family = AF_INET;
         hints.ai_protocol = IPPROTO_UDP;
 
-        if (getaddrinfo(node_info->hostname, port, &hints, &node_info->nodeaddr)) {
-            printf("Couldn't lookup hostname\n");
+        char port_str[16];
+        sprintf(port_str, "%d", node_info->port);
+        if (getaddrinfo(node_info->hostname, port_str, &hints, &node_info->nodeaddr)) {
+            printf("Couldn't lookup hostname: %s %s\n", node_info->hostname, port);
             free(line_buffer);
             fclose(fp);
             return -1;
         }
+
+        struct sockaddr_in *addr;
+        addr = (struct sockaddr_in *)node_info->nodeaddr;
+        char ip[INET_ADDRSTRLEN];
+        printf("Group List - Loaded node: %s %d %s \n", node_info->hostname, node_info->port, inet_ntoa((struct in_addr)addr->sin_addr));
+
+        line_size = getline(&line_buffer, &buffer_size, fp);
     }
 
     free(line_buffer);
