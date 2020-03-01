@@ -244,6 +244,10 @@ int main(int argc, char ** argv) {
 	 ntohl(client.sin_addr.s_addr), ntohs(client.sin_port),
 	 n, buff);
 
+  // TODO: What needs to be done on startup?
+  // Coordinator -> Send coord?
+  // Others -> ??  Guessing nothing, since if they can't reach the original coordinator they'll call an election
+
   // Main state loop
   while (properties.state != STOPPED) {
     state_main(&properties);
