@@ -6,6 +6,7 @@
 #define A2_STATE_MACHINE_H
 
 #include "msg.h"
+#include "grouplist.h"
 
 typedef enum {
     NORMAL_STATE = 30,
@@ -24,6 +25,8 @@ struct node_properties {
     unsigned long  timeoutValue;
     unsigned long  AYATime;
     unsigned long  sendFailureProbability;
+
+    struct group_list group_list;
 
     unsigned long coordinator; // Current coordinator's id
     unsigned int curElectionId; // counter to use for choosing electionId for msg (See msg.h for details, is for debugging only)

@@ -14,6 +14,7 @@
 
 #include "msg.h"
 #include "logger.h"
+#include "grouplist.h"
 #include "state_machine.h"
 
 

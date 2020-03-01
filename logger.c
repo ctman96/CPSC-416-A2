@@ -17,7 +17,7 @@ int init_logger(char* file_name){
     fp = fopen(LOG_FILE,"w"); // Open new file
 
     if (!fp) {
-        fprintf(stderr, "Unable to open log file!");
+        printf("Unable to open log file!");
         return -1;
     }
 
@@ -39,7 +39,7 @@ int init_logger(char* file_name){
  */
 int log_event(char* text, int node, struct clock* clock, int clock_length) {
     if (!running || !fp) {
-        fprintf(stderr, "Logger not initialized!");
+        printf("Logger not initialized!");
         return -1;
     }
 
@@ -72,7 +72,7 @@ int log_event(char* text, int node, struct clock* clock, int clock_length) {
 // Log debug lines to log
 int log_debug(char* text) {
     if (!running || !fp) {
-        fprintf(stderr, "Logger not initialized!");
+        printf("Logger not initialized!");
         return -1;
     }
 
