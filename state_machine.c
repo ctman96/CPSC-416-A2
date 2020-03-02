@@ -35,14 +35,30 @@ int state_main(struct node_properties* properties) {
 }
 
 int reply_IAA(struct node_properties* properties, struct received_msg* received) {
+    unsigned long port = ntohs(received->client.sin_port);
+    printf("Received AYA from %d\n", port);
+
+    int found = -1;
+    for (int i = 0; i < properties->group_list.node_count; i++) {
+        if (properties->group_list.list[i].port == port) {
+            found = 0;
+        }
+    }
+    if (found < 0) {
+        printf("%d not found in group list, discarding\n", port);
+        return 0;
+    }
+    printf("Replying IAA\n", port);
+
     struct msg IAA_msg;
-    IAA_msg.msgID = AYA;
+    IAA_msg.msgID = IAA;
     IAA_msg.electionID = received->message.electionID; // the electionID is to be set to the port number of the node sending the AYA
     // TODO: verify port is in group list and same address info?
-    return send_message(properties, received->message.electionID, &IAA_msg);
+    return send_message(properties, port, &IAA_msg);
 }
 
 int send_AYA(struct node_properties* properties) {
+    printf("Sending AYA to %d\n", properties->coordinator);
     struct msg AYA_msg;
     AYA_msg.msgID = AYA;
     AYA_msg.electionID = (int)properties->port; // the electionID is to be set to the port number of the node sending the AYA
@@ -182,6 +198,8 @@ int aya_state(struct node_properties* properties) {
             to_normal(properties);
             return 0;
         case IAA:
+            printf("Received IAA\n");
+            printf("Switching from AYA to NORMAL state\n");
             to_normal(properties);
             return 0;
         default:
