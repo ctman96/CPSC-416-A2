@@ -40,6 +40,7 @@ struct node_properties {
     unsigned long last_IAA; // epoch timestamp of last IAA received
 
     unsigned long ELECT_time;  // epoch timestamp of when ELECTs were sent
+    unsigned long AWAIT_COORD_time; // epoch timestamp of when started waiting for coord
 };
 
 struct received_msg {

@@ -150,7 +150,9 @@ int main(int argc, char ** argv) {
   properties.rand_aya_time = rn % (2*properties.AYATime);
 
   // Log startup
-  log_event("Started N3", 3, properties.vectorClock, MAX_NODES);
+  char lg_msg[64];
+  sprintf(lg_msg, "Started N%d", properties.port);
+  log_event("Started N", properties.port, properties.vectorClock, MAX_NODES);
 
   
   // This is some sample code to setup a UDP socket for sending and receiving.
@@ -242,10 +244,6 @@ int main(int argc, char ** argv) {
   printf("from %X:%d Size = %d - %s\n",
 	 ntohl(client.sin_addr.s_addr), ntohs(client.sin_port),
 	 n, buff);
-
-  // TODO: What needs to be done on startup?
-  // Coordinator -> Send coord?
-  // Others -> ??  Guessing nothing, since if they can't reach the original coordinator they'll call an election
 
   // Do initial coord message send if coordinator
   if (properties.coordinator == properties.port) {
