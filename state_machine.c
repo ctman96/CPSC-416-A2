@@ -75,10 +75,12 @@ int normal_state(struct node_properties* properties) {
     switch(received.message.msgID) {
         case ELECT:
             reply_answer(properties, &received);
+            printf("Switching from NORMAL to ELECT state\n");
             properties->curElectionId++;
             properties->state = ELECT_STATE;
             return 0;
         case COORD:
+            printf("Switching from NORMAL to AYA state\n");
             register_coordinator(properties, &received);
             break;
         case AYA:
@@ -94,19 +96,20 @@ int normal_state(struct node_properties* properties) {
     // If we're not the coordinator,send AYA messages to coordinator
     if (properties->coordinator != properties->port) {
         // If AYATime seconds have passed since last IAA received, send a new AYA
-        // TODO: is this supposed to be random like in the example code
-        if (time(NULL) - properties->last_IAA > properties->AYATime) {
+        if (time(NULL) - properties->last_IAA > properties->rand_aya_time) {
             int n = send_AYA(properties);
             if (n < 0) {
                 printf("send_aya failed\n");
                 return -1; // Don't move to AYA_STATE on an error
             } else {
+                printf("Switching from NORMAL to AYA state\n");
                 properties->state = AYA_STATE;
                 return 0;
             }
         }
     }
 
+    /*
     // Debug / test TODO remove
     struct msg sndmsg;
     sndmsg.msgID = ELECT;
@@ -114,11 +117,22 @@ int normal_state(struct node_properties* properties) {
     send_message(properties, properties->port, &sndmsg);
     struct received_msg receive = receive_message(properties);
     properties->state = STOPPED;
+     */
 }
 
 
+void set_rand_aya(struct node_properties* properties) {
+    unsigned long rn = random();
+    properties->rand_aya_time = rn % (2*properties->AYATime);
+}
 
-
+// helper to set values when switching aya to normal
+void aya_to_normal(struct node_properties* properties) {
+    printf("Switching from AYA to NORMAL state\n");
+    properties->last_IAA = time(NULL);
+    set_rand_aya(properties);
+    properties->state = NORMAL_STATE;
+}
 
 /*
     Receive IAA -> Normal state
@@ -133,17 +147,17 @@ int aya_state(struct node_properties* properties) {
 
     switch(received.message.msgID) {
         case ELECT:
+            printf("Switching from AYA to ELECT state\n");
             reply_answer(properties, &received);
             properties->curElectionId++;
             properties->state = ELECT_STATE;
             return 0;
         case COORD:
             register_coordinator(properties, &received);
-            properties->state = NORMAL_STATE;
+            aya_to_normal(properties);
             return 0;
         case IAA:
-            properties->last_IAA = time(NULL);
-            properties->state = NORMAL_STATE;
+            aya_to_normal(properties);
             return 0;
         default:
             break;
@@ -151,6 +165,7 @@ int aya_state(struct node_properties* properties) {
 
     // If timeout, coordinator failure detected
     if (time(NULL) - properties->last_AYA > properties->timeoutValue) {
+        printf("Switching from AYA to ELECT state\n");
         properties->curElectionId++;
         properties->state = ELECT_STATE;
         return 0;

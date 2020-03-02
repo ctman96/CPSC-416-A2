@@ -35,6 +35,7 @@ struct node_properties {
 
     int sockfd; // The node's socket descriptor
 
+    unsigned long rand_aya_time; // generated aya time (average = ayatime)
     unsigned long last_AYA; // epoch timestamp of last AYA send
     unsigned long last_IAA; // epoch timestamp of last IAA received
 };

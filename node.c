@@ -133,37 +133,25 @@ int main(int argc, char ** argv) {
     properties.vectorClock[i].time = 0;
 
     // Set coordinator to highest nodeId
-    if (properties.group_list.list[group_list_cursor].port > properties.coordinator) {
+    if (group_list_cursor < properties.group_list.node_count &&
+            properties.group_list.list[group_list_cursor].port > properties.coordinator) {
       properties.coordinator = properties.group_list.list[group_list_cursor].port;
     }
     group_list_cursor++;
   }
 
+  // Setup random seed
+  srandom(time(0));
+
   properties.curElectionId = properties.port * 100000; // Attempt at unique electionIds per node
   properties.last_AYA = time(NULL);
   properties.last_IAA = time(NULL);
+  unsigned long rn = random();
+  properties.rand_aya_time = rn % (2*properties.AYATime);
 
   // Log startup
   log_event("Started N3", 3, properties.vectorClock, MAX_NODES);
 
-
-  // If you want to produce a repeatable sequence of "random" numbers
-  // replace the call to  time() with an integer.
-  srandom(time(0));
-  
-
-  int i;
-  for (i = 0; i < 10; i++) {
-    int rn;
-    rn = random(); 
-    
-    // scale to number between 0 and the 2*AYA time so that 
-    // the average value for the timeout is AYA time.
-    
-    int sc = rn % (2*properties.AYATime);
-    printf("Random number %d is: %d\n", i, sc);
-  }
-  
   
   // This is some sample code to setup a UDP socket for sending and receiving.
   struct sockaddr_in servAddr;
@@ -260,8 +248,13 @@ int main(int argc, char ** argv) {
   // Others -> ??  Guessing nothing, since if they can't reach the original coordinator they'll call an election
 
   // Main state loop
+  int i;
   while (properties.state != STOPPED) {
-    state_main(&properties);
+    i = state_main(&properties);
+    if (i < 0) {
+      printf("Error, Program exiting\n");
+      return i;
+    }
   }
 
   // NOTE to avoid memory leaks you must free the struct returned
