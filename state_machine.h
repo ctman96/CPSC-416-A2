@@ -55,6 +55,7 @@ int await_coord_state(struct node_properties* properties);
 struct received_msg receive_message(struct node_properties* properties);
 int send_message(struct node_properties* properties, unsigned long node_id_port, struct msg* msg);
 int reply_answer(struct node_properties* properties, struct received_msg* received);
+int send_ELECTS(struct node_properties* properties)
 int register_coordinator(struct node_properties* properties, struct received_msg* received);
 
 void merge_clocks(struct clock our_vector_clock[MAX_NODES],  struct clock received_vector_clock[MAX_NODES]);

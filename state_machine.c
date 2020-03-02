@@ -34,7 +34,6 @@ int state_main(struct node_properties* properties) {
     }
 }
 
-
 int reply_IAA(struct node_properties* properties, struct received_msg* received) {
     struct msg IAA_msg;
     IAA_msg.msgID = AYA;
@@ -53,6 +52,23 @@ int send_AYA(struct node_properties* properties) {
     } else {
         properties->last_AYA = time(NULL);
         return 0;
+    }
+}
+
+// sends ELECT message to all nodes in group list with higher port
+int send_ELECTS(struct node_properties* properties) {
+    for (int i = 1; i < properties->group_list.node_count; i++) {
+        if (properties->group_list.list[i].port > properties.port) {
+            struct msg ELECT_msg;
+            ELECT_msg.msgID = ELECT;
+
+            // sets self nodeid, electionctr as id for debugging 
+            char idStr[32];
+            sprintf(str, "%d%d", (int)properties->port, properties->curElectionId);
+            unsigned int id = atoi(idStr);
+            ELECT_msg.electionID = id;
+            return send_message(properties, group_list.list[i].port, &ELECT_msg);
+        }
     }
 }
 
@@ -175,9 +191,6 @@ int aya_state(struct node_properties* properties) {
 }
 
 
-
-
-
 /*
     ELECT message received -> Reply ANSWER message
         Send ELECT to higher nodes,  -> AwaitAnswer state
@@ -187,8 +200,27 @@ int aya_state(struct node_properties* properties) {
 
  */
 int elect_state(struct node_properties* properties) {
-    properties->state = STOPPED;
-    // TODO
+
+    // first respond to recieved messages
+    struct received_msg received = receive_message(properties);
+    switch(received.message.msgID) {
+        case COORD:
+            register_coordinator(properties, &received);
+            printf("Switching from ELECT to NORMAL state\n");
+            properties->last_IAA = time(NULL);
+            set_rand_aya(properties);
+            properties->state = NORMAL_STATE;
+            return 0;
+        case ELECT:
+            reply_answer(properties, &received);
+            break;
+        default:
+            break;
+    
+    // send out election
+    send_ELECTS(properties);
+
+    properties->state = await_answer_state;
     return 0;
 }
 

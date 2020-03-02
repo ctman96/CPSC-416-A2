@@ -247,6 +247,9 @@ int main(int argc, char ** argv) {
   // Coordinator -> Send coord?
   // Others -> ??  Guessing nothing, since if they can't reach the original coordinator they'll call an election
 
+  // Do inital coordinator send-elects 
+  send_ELECTS(properties);
+
   // Main state loop
   int i;
   while (properties.state != STOPPED) {
