@@ -229,12 +229,22 @@ int elect_state(struct node_properties* properties) {
             break;
     }
     
-    // send out election
-    if (send_ELECTS(properties) < 0) return -1;
-    // set time of election to check for timeout later
-    properties->ELECT_time = time(NULL);
-    printf("Switching from ELECT to AWAIT_ANSWER state\n");
-    properties->state = AWAIT_ANSWER_STATE;
+    // send out election if not the highest node
+    if (properties->port == properties->orig_coordinator) {
+        if (send_ELECTS(properties) < 0) return -1;
+        // set time of election to check for timeout later
+        properties->ELECT_time = time(NULL);
+        printf("Switching from ELECT to AWAIT_ANSWER state\n");
+        properties->state = AWAIT_ANSWER_STATE;
+        return 0;
+    } else {
+        printf("Setting self as coordinator\n");
+        if (send_COORDS(properties) < 0) return -1;
+        properties->coordinator = properties->port;
+        printf("Switching from ELECT to NORMAL state\n");
+        to_normal(properties);
+    }
+
     return 0;
 }
 
@@ -275,7 +285,7 @@ int await_answer_state(struct node_properties* properties) {
         if (send_COORDS(properties) < 0) return -1;
         properties->coordinator = properties->port;
         printf("Switching from AWAIT_ANSWER_STATE to NORMAL_STATE\n");
-        properties->state = NORMAL_STATE;
+        to_normal(properties);
     }
 
     return 0;

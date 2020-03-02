@@ -28,6 +28,7 @@ struct node_properties {
 
     struct group_list group_list;
 
+    unsigned long orig_coordinator; // Node with highest id
     unsigned long coordinator; // Current coordinator's id
     unsigned int curElectionId; // counter to use for choosing electionId for msg (See msg.h for details, is for debugging only)
 

@@ -139,6 +139,8 @@ int main(int argc, char ** argv) {
     }
     group_list_cursor++;
   }
+  // Track the original coordinator
+  properties.orig_coordinator = properties.coordinator;
 
   // Setup random seed
   srandom(time(0));
