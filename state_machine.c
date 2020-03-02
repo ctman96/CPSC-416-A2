@@ -235,13 +235,11 @@ int elect_state(struct node_properties* properties) {
     
     // send out election
     send_ELECTS(properties);
-
+    // set time of election to check for timeout later
+    properties->ELECT_time = time(NULL);
     properties->state = AWAIT_ANSWER_STATE;
     return 0;
 }
-
-
-
 
 
 /*
@@ -251,8 +249,33 @@ int elect_state(struct node_properties* properties) {
     Receive COORD message -> register new coordinator -> Normal state
  */
 int await_answer_state(struct node_properties* properties) {
-    properties->state = STOPPED;
-    // TODO
+    struct received_msg received = receive_message(properties);
+    switch(received.message.msgID) {
+        case COORD:
+            register_coordinator(properties, &received);
+            printf("Switching from AWAIT_ANSWER_STATE to NORMAL_STATE\n");
+            properties->last_IAA = time(NULL);
+            set_rand_aya(properties);
+            properties->state = NORMAL_STATE;
+            return 0;
+        case ELECT:
+            reply_answer(properties, &received);
+            break;
+        case ANSWER:
+            printf("Switching from AWAIT_ANSWER_STATE to AWAIT_COORD_STATE\n");
+            properties->state = AWAIT_COORD_STATE;
+            return 0;
+        default:
+            break;
+    }
+
+    // if waited for more than (MAX_NODES + 1) * timeout without an answer, then node is new coordinator
+    if (time(NULL) - properties->ELECT_time > (properties->timeoutValue * (MAX_NODES + 1))) {
+        send_COORDS(properties);
+        properties->coordinator = properties->port;
+        properties->state = NORMAL_STATE;
+    }
+
     return 0;
 }
 
