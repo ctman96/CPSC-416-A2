@@ -39,7 +39,7 @@ struct node_properties {
     unsigned long last_AYA; // epoch timestamp of last AYA send
     unsigned long last_IAA; // epoch timestamp of last IAA received
 
-    unsigned long ELECT_time  // epoch timestamp of when ELECTs were sent
+    unsigned long ELECT_time;  // epoch timestamp of when ELECTs were sent
 };
 
 struct received_msg {

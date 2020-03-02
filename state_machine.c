@@ -288,8 +288,22 @@ int await_answer_state(struct node_properties* properties) {
     Timeout if a COORD message isn't received within ((MAX_NODES + 1) timeout value
  */
 int await_coord_state(struct node_properties* properties) {
-    properties->state = STOPPED;
-    // TODO
+    struct received_msg received = receive_message(properties);
+    switch(received.message.msgID) {
+        case COORD:
+            register_coordinator(properties, &received);
+            printf("Switching from AWAIT_COORD_STATE to NORMAL_STATE\n");
+            properties->last_IAA = time(NULL);
+            set_rand_aya(properties);
+            properties->state = NORMAL_STATE;
+            return 0;
+        case ELECT:
+            reply_answer(properties, &received);
+            break;
+        default:
+            break;
+    }
+
     return 0;
 }
 
