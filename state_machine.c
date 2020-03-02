@@ -96,8 +96,7 @@ int normal_state(struct node_properties* properties) {
     // If we're not the coordinator,send AYA messages to coordinator
     if (properties->coordinator != properties->port) {
         // If AYATime seconds have passed since last IAA received, send a new AYA
-        // TODO: is this supposed to be random like in the example code
-        if (time(NULL) - properties->last_IAA > properties->AYATime) {
+        if (time(NULL) - properties->last_IAA > properties->rand_aya_time) {
             int n = send_AYA(properties);
             if (n < 0) {
                 printf("send_aya failed\n");
@@ -122,8 +121,18 @@ int normal_state(struct node_properties* properties) {
 }
 
 
+void set_rand_aya(struct node_properties* properties) {
+    unsigned long rn = random();
+    properties->rand_aya_time = rn % (2*properties->AYATime);
+}
 
-
+// helper to set values when switching aya to normal
+void aya_to_normal(struct node_properties* properties) {
+    printf("Switching from AYA to NORMAL state\n");
+    properties->last_IAA = time(NULL);
+    set_rand_aya(properties);
+    properties->state = NORMAL_STATE;
+}
 
 /*
     Receive IAA -> Normal state
@@ -144,14 +153,11 @@ int aya_state(struct node_properties* properties) {
             properties->state = ELECT_STATE;
             return 0;
         case COORD:
-            printf("Switching from AYA to NORMAL state\n");
             register_coordinator(properties, &received);
-            properties->state = NORMAL_STATE;
+            aya_to_normal(properties);
             return 0;
         case IAA:
-            printf("Switching from AYA to NORMAL state\n");
-            properties->last_IAA = time(NULL);
-            properties->state = NORMAL_STATE;
+            aya_to_normal(properties);
             return 0;
         default:
             break;
