@@ -372,6 +372,8 @@ struct received_msg receive_message(struct node_properties* properties) {
             return received_message;
         }
     } else {
+        properties->vectorClock[0].time++;
+
         // Update vector clock
         merge_clocks(properties->vectorClock, received_message.message.vectorClock);
 
