@@ -185,69 +185,9 @@ int main(int argc, char ** argv) {
     exit(EXIT_FAILURE); 
   }
 
-  // At this point the socket is setup and can be used for both
-  // sending and receiving
-  
-  // Now pretend we are A "client, but sent the message to ourselves
-  char *msg = "A message to myself!";
-
-  // This would normally be a real hostname or IP address
-  // as opposed to localhost
-  char *hostname = "localhost";
-  struct addrinfo hints, *serverAddr;
-  serverAddr = NULL;
-
-  memset(&hints, 0, sizeof(hints));
-  hints.ai_socktype = SOCK_DGRAM;
-  hints.ai_family = AF_INET;
-  hints.ai_protocol = IPPROTO_UDP;
-
-  if (getaddrinfo(hostname, argv[1], &hints, &serverAddr)) {
-    printf("Couldn't lookup hostname\n");
-    return -1;
-  }
-  
-
-  // Send the message to ourselves
-  int bytesSent;
-  bytesSent = sendto(properties.sockfd, (const char *) msg, strlen(msg), MSG_CONFIRM,
-		     serverAddr->ai_addr, serverAddr->ai_addrlen);
-  if (bytesSent != strlen(msg)) {
-    perror("UDP send failed: ");
-    return -1;
-  }
-
-
-
-  struct sockaddr_in client;
-    int len;
-  char  buff[100];
-
-  memset(&client, 0, sizeof(client));
-  //  client.sin_family = AF_INET;
-  // client.sin_port = htons(properties.port);
-  //client.sin_addr.s_addr = INADDR_ANY;
-  
-  int n; 
-  n = recvfrom(properties.sockfd, buff, 100, MSG_WAITALL,
-	       (struct sockaddr *) &client, &len);
-
-  // client will point to the address info of the node
-  // that sent this message. The information can be used
-  // to send back a response, if needed
-  if (n < 0) {
-    perror("Receiving error");
-    return -3;
-  }
-  
-  buff[n] = (char) 0;
-  printf("from %X:%d Size = %d - %s\n",
-	 ntohl(client.sin_addr.s_addr), ntohs(client.sin_port),
-	 n, buff);
-
   // Do initial coord message send if coordinator
   if (properties.coordinator == properties.port) {
-      send_COORDS(&properties);
+      if (send_COORDS(&properties) < 0) return -1;
   }
 
   // Main state loop
@@ -264,8 +204,6 @@ int main(int argc, char ** argv) {
   // by getaddrinfo. You will probably want to retrieve the information
   // just once and then associate it with the IP address, port pair.
   // Freeing is done with a call to get freeaddrinfo();
-
-  freeaddrinfo(serverAddr);
 
   return 0;
   

@@ -76,6 +76,7 @@ int send_COORDS(struct node_properties* properties) {
     // start from one, as self is index zero. Send coords to all lower ports
     for (int i = 1; i <= properties->group_list.node_count; i++) {
         if (properties->group_list.list[i].port < properties->port) {
+            printf("%d, %s, %d", i, properties->group_list.list[i].hostname, properties->group_list.list[i].port);
             struct msg COORD_msg;
             COORD_msg.msgID = COORD;
             COORD_msg.electionID = properties->curElectionId;
@@ -222,10 +223,10 @@ int elect_state(struct node_properties* properties) {
     }
     
     // send out election
-    send_ELECTS(properties);
+    if (send_ELECTS(properties) < 0) return -1;
     // set time of election to check for timeout later
     properties->ELECT_time = time(NULL);
-    printf("Switching from ELECT to NORMAL state\n");
+    printf("Switching from ELECT to AWAIT_ANSWER state\n");
     properties->state = AWAIT_ANSWER_STATE;
     return 0;
 }
@@ -259,7 +260,8 @@ int await_answer_state(struct node_properties* properties) {
 
     // if waited for more than timeout without an answer, then node is new coordinator
     if (time(NULL) - properties->ELECT_time > properties->timeoutValue) {
-        send_COORDS(properties);
+        printf("Timeout, setting self as coordinator\n");
+        if (send_COORDS(properties) < 0) return -1;
         properties->coordinator = properties->port;
         printf("Switching from AWAIT_ANSWER_STATE to NORMAL_STATE\n");
         properties->state = NORMAL_STATE;
@@ -293,8 +295,11 @@ int await_coord_state(struct node_properties* properties) {
 
     // If times out, call new election
     if (time(NULL) - properties->AWAIT_COORD_time > (properties->timeoutValue * (MAX_NODES + 1))) {
+        printf("Timeout, calling new election\n");
+        printf("Switching from AWAIT_COORD_STATE to ELECT_STATE\n");
         properties->curElectionId++;
         properties->state = ELECT_STATE;
+        return 0;
     }
 
     return 0;
@@ -338,7 +343,6 @@ struct received_msg receive_message(struct node_properties* properties) {
 
 
 int send_message(struct node_properties* properties, unsigned long node_id_port, struct msg* message) {
-
     struct addrinfo* nodeAddr = NULL;
 
     // Get recipient info from group_list
@@ -384,6 +388,7 @@ int send_message(struct node_properties* properties, unsigned long node_id_port,
 
 
 int reply_answer(struct node_properties* properties, struct received_msg* received) {
+    printf("Received elect from %d, replying answer\n", received->client.sin_port);
     struct msg ANSWER_msg;
     ANSWER_msg.msgID = ANSWER;
     ANSWER_msg.electionID = received->message.electionID;
@@ -393,6 +398,7 @@ int reply_answer(struct node_properties* properties, struct received_msg* receiv
 
 
 int register_coordinator(struct node_properties* properties, struct received_msg* received) {
+    printf("Set coordinator to %d\n", received->client.sin_port);
     properties->coordinator = ntohs(received->client.sin_port);
     return 0;
 }
