@@ -75,7 +75,7 @@ int send_ELECTS(struct node_properties* properties) {
 // sends COORDs to all nodes with lower port
 int send_COORDS(struct node_properties* properties) {
     // start from one, as self is index zero. Send coords to all lower ports
-    for (int i = 1; i =< properties->group_list.node_count; i++) {
+    for (int i = 1; i <= properties->group_list.node_count; i++) {
         if (properties->group_list[i].port < properties->port) {
             struct msg COORD_msg;
             COORD_msg.msgID = COORD;
