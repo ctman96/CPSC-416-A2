@@ -125,7 +125,6 @@ int normal_state(struct node_properties* properties) {
         case ELECT:
             if (reply_answer(properties, &received) < 0) return -1;
             printf("Switching from NORMAL to ELECT state\n");
-            properties->curElectionId++;
             properties->state = ELECT_STATE;
             return 0;
         case COORD:
@@ -187,7 +186,6 @@ int aya_state(struct node_properties* properties) {
         case ELECT:
             if (reply_answer(properties, &received) < 0) return -1;
             printf("Switching from AYA to ELECT state\n");
-            properties->curElectionId++;
             properties->state = ELECT_STATE;
             return 0;
         case COORD:
@@ -209,7 +207,6 @@ int aya_state(struct node_properties* properties) {
     // If timeout, coordinator failure detected
     if (time(NULL) - properties->last_AYA > properties->timeoutValue) {
         printf("Switching from AYA to ELECT state\n");
-        properties->curElectionId++;
         properties->state = ELECT_STATE;
         return 0;
     }
@@ -246,24 +243,25 @@ int elect_state(struct node_properties* properties) {
         default:
             break;
     }
+
+    properties->curElectionId++;
     
     // send out election if not the highest node
     if (properties->port == properties->orig_coordinator) {
+        printf("Setting self as coordinator\n");
+        if (send_COORDS(properties) < 0) return -1;
+        properties->coordinator = properties->port;
+        printf("Switching from ELECT to NORMAL state\n");
+        to_normal(properties);
+        return 0;
+    } else {
         if (send_ELECTS(properties) < 0) return -1;
         // set time of election to check for timeout later
         properties->ELECT_time = time(NULL);
         printf("Switching from ELECT to AWAIT_ANSWER state\n");
         properties->state = AWAIT_ANSWER_STATE;
         return 0;
-    } else {
-        printf("Setting self as coordinator\n");
-        if (send_COORDS(properties) < 0) return -1;
-        properties->coordinator = properties->port;
-        printf("Switching from ELECT to NORMAL state\n");
-        to_normal(properties);
     }
-
-    return 0;
 }
 
 
@@ -340,7 +338,6 @@ int await_coord_state(struct node_properties* properties) {
     if (time(NULL) - properties->AWAIT_COORD_time > (properties->timeoutValue * (MAX_NODES + 1))) {
         printf("Timeout, calling new election\n");
         printf("Switching from AWAIT_COORD_STATE to ELECT_STATE\n");
-        properties->curElectionId++;
         properties->state = ELECT_STATE;
         return 0;
     }
