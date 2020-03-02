@@ -214,6 +214,7 @@ int test_send_message(struct node_properties * test_properties) {
     }
 
     // TODO
+
     printf("=== Test sending message ===\n");
     // ------
 
@@ -227,6 +228,40 @@ int test_send_message(struct node_properties * test_properties) {
 int test_receive_message(struct node_properties * test_properties) {
     printf("\n======= RECEIVE_MESSAGE =======\n");
     int status = 0;
+
+    printf("=== Test receiving message ===\n");
+
+    // Setup
+    struct msg message;
+    message.msgID = AYA;
+    message.electionID = test_properties->port;
+    memcpy(message.vectorClock, test_properties->vectorClock, sizeof(message.vectorClock));
+    test_properties->vectorClock[1].time = 0;
+    message.vectorClock[1].time = 10;
+
+    // Send message
+    int bytesSent;
+    bytesSent = sendto(test_properties->sockfd, (void *)&message, sizeof(message), 0,
+                       test_properties->group_list.list[0].nodeaddr->ai_addr, test_properties->group_list.list[0].nodeaddr->ai_addrlen);
+    if (bytesSent != sizeof(message)) {
+        printf("UDP send failed \n");
+        printf("=== Test receiving message ===\n");
+        return -1;
+    }
+
+    struct received_msg received = receive_message(test_properties);
+    if (received.message.msgID != message.msgID || received.message.electionID != message.electionID) {
+        printf("Message contents do not match up!\n");
+        status = -1;
+    }
+
+    if (test_properties->vectorClock[1].time != 10) {
+        printf("Vector clock wasn't updated properly!\n");
+        status = -1;
+    }
+
+    printf("=== Test receiving message ===\n");
+
     // TODO
     printf("======= RECEIVE_MESSAGE =======\n");
     return status;
