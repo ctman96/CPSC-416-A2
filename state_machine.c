@@ -470,7 +470,7 @@ void merge_clocks(struct clock our_vector_clock[MAX_NODES],  struct clock receiv
         struct clock* current_clock = &our_vector_clock[i];
 
         for (int j = 0; j < MAX_NODES; j++) {
-            struct clock* received_clock = &received_vector_clock[i];
+            struct clock* received_clock = &received_vector_clock[j];
 
             if (received_clock->nodeId != current_clock->nodeId)
                 continue;
