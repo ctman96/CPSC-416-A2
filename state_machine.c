@@ -58,7 +58,7 @@ int send_AYA(struct node_properties* properties) {
 // sends ELECT message to all nodes in group list with higher port
 int send_ELECTS(struct node_properties* properties) {
     for (int i = 1; i < properties->group_list.node_count; i++) {
-        if (properties->group_list.list[i].port > properties.port) {
+        if (properties->group_list.list[i].port > properties->port) {
             struct msg ELECT_msg;
             ELECT_msg.msgID = ELECT;
 
@@ -67,7 +67,7 @@ int send_ELECTS(struct node_properties* properties) {
             sprintf(idStr, "%d%d", (int)properties->port, properties->curElectionId);
             unsigned int id = atoi(idStr);
             ELECT_msg.electionID = id;
-            return send_message(properties, group_list.list[i].port, &ELECT_msg);
+            return send_message(properties, properties->group_list.list[i].port, &ELECT_msg);
         }
     }
 }
@@ -79,7 +79,7 @@ int send_COORDS(struct node_properties* properties) {
         if (properties->group_list[i].port < properties->port) {
             struct msg COORD_msg;
             COORD_msg.msgID = COORD;
-            COORD_msg.electionID = curElectionId;
+            COORD_msg.electionID = properties->curElectionId;
             return send_message(properties, properties->group_list[i].port, &COORD_msg);
         }
     }
