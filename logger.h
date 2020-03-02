@@ -5,8 +5,6 @@
 #ifndef A2_LOGGER_H
 #define A2_LOGGER_H
 
-#define LOG_FILE "event.log"
-
 #include "msg.h"
 
 // Initialize logger
@@ -17,5 +15,7 @@ int log_event(char* text, int node, struct clock* clock, int clock_length);
 
 // Log debug lines
 int log_debug(char* text);
+
+void close_logger();
 
 #endif //A2_LOGGER_H

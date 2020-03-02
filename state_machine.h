@@ -28,6 +28,7 @@ struct node_properties {
 
     struct group_list group_list;
 
+    unsigned long orig_coordinator; // Node with highest id
     unsigned long coordinator; // Current coordinator's id
     unsigned int curElectionId; // counter to use for choosing electionId for msg (See msg.h for details, is for debugging only)
 
@@ -40,11 +41,13 @@ struct node_properties {
     unsigned long last_IAA; // epoch timestamp of last IAA received
 
     unsigned long ELECT_time;  // epoch timestamp of when ELECTs were sent
+    unsigned long AWAIT_COORD_time; // epoch timestamp of when started waiting for coord
 };
 
 struct received_msg {
     struct sockaddr_in client;  // Sender of the message
     struct msg message;         // Message
+    int error;
 };
 
 int state_main(struct node_properties* properties);

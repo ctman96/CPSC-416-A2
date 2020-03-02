@@ -35,14 +35,30 @@ int state_main(struct node_properties* properties) {
 }
 
 int reply_IAA(struct node_properties* properties, struct received_msg* received) {
+    unsigned long port = ntohs(received->client.sin_port);
+    printf("Received AYA from %d\n", port);
+
+    int found = -1;
+    for (int i = 0; i < properties->group_list.node_count; i++) {
+        if (properties->group_list.list[i].port == port) {
+            found = 0;
+        }
+    }
+    if (found < 0) {
+        printf("%d not found in group list, discarding\n", port);
+        return 0;
+    }
+    printf("Replying IAA\n", port);
+
     struct msg IAA_msg;
-    IAA_msg.msgID = AYA;
+    IAA_msg.msgID = IAA;
     IAA_msg.electionID = received->message.electionID; // the electionID is to be set to the port number of the node sending the AYA
     // TODO: verify port is in group list and same address info?
-    send_message(properties, received->message.electionID, &IAA_msg);
+    return send_message(properties, port, &IAA_msg);
 }
 
 int send_AYA(struct node_properties* properties) {
+    printf("Sending AYA to %d\n", properties->coordinator);
     struct msg AYA_msg;
     AYA_msg.msgID = AYA;
     AYA_msg.electionID = (int)properties->port; // the electionID is to be set to the port number of the node sending the AYA
@@ -57,34 +73,35 @@ int send_AYA(struct node_properties* properties) {
 
 // sends ELECT message to all nodes in group list with higher port
 int send_ELECTS(struct node_properties* properties) {
-    for (int i = 1; i < properties->group_list.node_count; i++) {
+    for (int i = 0; i < properties->group_list.node_count; i++) {
         if (properties->group_list.list[i].port > properties->port) {
             struct msg ELECT_msg;
             ELECT_msg.msgID = ELECT;
-
-            // sets self nodeid, electionctr as id for debugging
-            char idStr[32];
-            sprintf(idStr, "%d%d", (int)properties->port, properties->curElectionId);
-            unsigned int id = atoi(idStr);
-            ELECT_msg.electionID = id;
-            return send_message(properties, properties->group_list.list[i].port, &ELECT_msg);
+            ELECT_msg.electionID = properties->curElectionId;
+            if (send_message(properties, properties->group_list.list[i].port, &ELECT_msg) < 0) {
+                printf("Send elects error\n");
+                return -1;
+            }
         }
     }
+    return 0;
 }
 
 // sends COORDs to all nodes with lower port
 int send_COORDS(struct node_properties* properties) {
     // start from one, as self is index zero. Send coords to all lower ports
-    for (int i = 1; i <= properties->group_list.node_count; i++) {
+    for (int i = 0; i < properties->group_list.node_count; i++) {
         if (properties->group_list.list[i].port < properties->port) {
             struct msg COORD_msg;
             COORD_msg.msgID = COORD;
             COORD_msg.electionID = properties->curElectionId;
-            return send_message(properties, properties->group_list.list[i].port, &COORD_msg);
+            if (send_message(properties, properties->group_list.list[i].port, &COORD_msg) < 0) {
+                printf("Send coords error\n");
+                return -1;
+            }
         }
     }
-
-
+    return 0;
 }
 
 /*
@@ -102,22 +119,21 @@ int normal_state(struct node_properties* properties) {
 
     // Check for message
     struct received_msg received = receive_message(properties);
+    if (received.error < 0) return -1;
 
     switch(received.message.msgID) {
         case ELECT:
-            reply_answer(properties, &received);
+            if (reply_answer(properties, &received) < 0) return -1;
             printf("Switching from NORMAL to ELECT state\n");
-            properties->curElectionId++;
             properties->state = ELECT_STATE;
             return 0;
         case COORD:
-            printf("Switching from NORMAL to AYA state\n");
             register_coordinator(properties, &received);
             break;
         case AYA:
             // If coordinator, reply to AYA messages
             if (properties->coordinator == properties->port) {
-                reply_IAA(properties, &received);
+                if (reply_IAA(properties, &received) < 0) return -1;
             }
             break;
         default:
@@ -139,16 +155,6 @@ int normal_state(struct node_properties* properties) {
             }
         }
     }
-
-    /*
-    // Debug / test TODO remove
-    struct msg sndmsg;
-    sndmsg.msgID = ELECT;
-    sndmsg.electionID = properties->curElectionId++;
-    send_message(properties, properties->port, &sndmsg);
-    struct received_msg receive = receive_message(properties);
-    properties->state = STOPPED;
-     */
 }
 
 
@@ -157,9 +163,8 @@ void set_rand_aya(struct node_properties* properties) {
     properties->rand_aya_time = rn % (2*properties->AYATime);
 }
 
-// helper to set values when switching aya to normal
-void aya_to_normal(struct node_properties* properties) {
-    printf("Switching from AYA to NORMAL state\n");
+// helper to set values when switching to normal
+void to_normal(struct node_properties* properties) {
     properties->last_IAA = time(NULL);
     set_rand_aya(properties);
     properties->state = NORMAL_STATE;
@@ -175,20 +180,25 @@ int aya_state(struct node_properties* properties) {
 
     // Check for message
     struct received_msg received = receive_message(properties);
+    if (received.error < 0) return -1;
 
     switch(received.message.msgID) {
         case ELECT:
+            if (reply_answer(properties, &received) < 0) return -1;
             printf("Switching from AYA to ELECT state\n");
-            reply_answer(properties, &received);
-            properties->curElectionId++;
             properties->state = ELECT_STATE;
             return 0;
         case COORD:
-            register_coordinator(properties, &received);
-            aya_to_normal(properties);
+            if (register_coordinator(properties, &received) < 0) {
+                break;
+            }
+            printf("Switching from AYA to NORMAL state\n");
+            to_normal(properties);
             return 0;
         case IAA:
-            aya_to_normal(properties);
+            printf("Received IAA\n");
+            printf("Switching from AYA to NORMAL state\n");
+            to_normal(properties);
             return 0;
         default:
             break;
@@ -197,7 +207,6 @@ int aya_state(struct node_properties* properties) {
     // If timeout, coordinator failure detected
     if (time(NULL) - properties->last_AYA > properties->timeoutValue) {
         printf("Switching from AYA to ELECT state\n");
-        properties->curElectionId++;
         properties->state = ELECT_STATE;
         return 0;
     }
@@ -218,27 +227,41 @@ int elect_state(struct node_properties* properties) {
 
     // first respond to recieved messages
     struct received_msg received = receive_message(properties);
+    if (received.error < 0) return -1;
+
     switch(received.message.msgID) {
         case COORD:
-            register_coordinator(properties, &received);
+            if (register_coordinator(properties, &received) < 0) {
+                break;
+            }
             printf("Switching from ELECT to NORMAL state\n");
-            properties->last_IAA = time(NULL);
-            set_rand_aya(properties);
-            properties->state = NORMAL_STATE;
+            to_normal(properties);
             return 0;
         case ELECT:
-            reply_answer(properties, &received);
+            if (reply_answer(properties, &received) < 0) return -1;
             break;
         default:
             break;
     }
+
+    properties->curElectionId++;
     
-    // send out election
-    send_ELECTS(properties);
-    // set time of election to check for timeout later
-    properties->ELECT_time = time(NULL);
-    properties->state = AWAIT_ANSWER_STATE;
-    return 0;
+    // send out election if not the highest node
+    if (properties->port == properties->orig_coordinator) {
+        printf("Setting self as coordinator\n");
+        if (send_COORDS(properties) < 0) return -1;
+        properties->coordinator = properties->port;
+        printf("Switching from ELECT to NORMAL state\n");
+        to_normal(properties);
+        return 0;
+    } else {
+        if (send_ELECTS(properties) < 0) return -1;
+        // set time of election to check for timeout later
+        properties->ELECT_time = time(NULL);
+        printf("Switching from ELECT to AWAIT_ANSWER state\n");
+        properties->state = AWAIT_ANSWER_STATE;
+        return 0;
+    }
 }
 
 
@@ -250,30 +273,35 @@ int elect_state(struct node_properties* properties) {
  */
 int await_answer_state(struct node_properties* properties) {
     struct received_msg received = receive_message(properties);
+    if (received.error < 0) return -1;
+
     switch(received.message.msgID) {
         case COORD:
-            register_coordinator(properties, &received);
+            if (register_coordinator(properties, &received) < 0) {
+                break;
+            }
             printf("Switching from AWAIT_ANSWER_STATE to NORMAL_STATE\n");
-            properties->last_IAA = time(NULL);
-            set_rand_aya(properties);
-            properties->state = NORMAL_STATE;
+            to_normal(properties);
             return 0;
         case ELECT:
-            reply_answer(properties, &received);
+            if (reply_answer(properties, &received) < 0) return -1;
             break;
         case ANSWER:
             printf("Switching from AWAIT_ANSWER_STATE to AWAIT_COORD_STATE\n");
+            properties->AWAIT_COORD_time = time(NULL);
             properties->state = AWAIT_COORD_STATE;
             return 0;
         default:
             break;
     }
 
-    // if waited for more than (MAX_NODES + 1) * timeout without an answer, then node is new coordinator
-    if (time(NULL) - properties->ELECT_time > (properties->timeoutValue * (MAX_NODES + 1))) {
-        send_COORDS(properties);
+    // if waited for more than timeout without an answer, then node is new coordinator
+    if (time(NULL) - properties->ELECT_time > properties->timeoutValue) {
+        printf("Timeout, setting self as coordinator\n");
+        if (send_COORDS(properties) < 0) return -1;
         properties->coordinator = properties->port;
-        properties->state = NORMAL_STATE;
+        printf("Switching from AWAIT_ANSWER_STATE to NORMAL_STATE\n");
+        to_normal(properties);
     }
 
     return 0;
@@ -289,19 +317,29 @@ int await_answer_state(struct node_properties* properties) {
  */
 int await_coord_state(struct node_properties* properties) {
     struct received_msg received = receive_message(properties);
+    if (received.error < 0) return -1;
+
     switch(received.message.msgID) {
         case COORD:
-            register_coordinator(properties, &received);
+            if (register_coordinator(properties, &received) < 0) {
+                break;
+            }
             printf("Switching from AWAIT_COORD_STATE to NORMAL_STATE\n");
-            properties->last_IAA = time(NULL);
-            set_rand_aya(properties);
-            properties->state = NORMAL_STATE;
+            to_normal(properties);
             return 0;
         case ELECT:
-            reply_answer(properties, &received);
+            if (reply_answer(properties, &received) < 0) return -1;
             break;
         default:
             break;
+    }
+
+    // If times out, call new election
+    if (time(NULL) - properties->AWAIT_COORD_time > (properties->timeoutValue * (MAX_NODES + 1))) {
+        printf("Timeout, calling new election\n");
+        printf("Switching from AWAIT_COORD_STATE to ELECT_STATE\n");
+        properties->state = ELECT_STATE;
+        return 0;
     }
 
     return 0;
@@ -316,8 +354,9 @@ int await_coord_state(struct node_properties* properties) {
 struct received_msg receive_message(struct node_properties* properties) {
     struct received_msg received_message;
     received_message.message.msgID = INVALID;
+    received_message.error = 0;
 
-    int len;
+    int len = sizeof(received_message.client);
     char  buff[100];
     memset(&received_message.client, 0, sizeof(received_message.client));
 
@@ -326,11 +365,15 @@ struct received_msg receive_message(struct node_properties* properties) {
     if (size == -1 ) {
         if (errno != EAGAIN && errno != EWOULDBLOCK) {
             printf("Error receiving: %s! \n", strerror(errno));
-            // TODO ?
+            received_message.message.msgID = INVALID;
+            received_message.error = -1;
+            return received_message;
         } else {
             return received_message;
         }
     } else {
+        properties->vectorClock[0].time++;
+
         // Update vector clock
         merge_clocks(properties->vectorClock, received_message.message.vectorClock);
 
@@ -345,7 +388,6 @@ struct received_msg receive_message(struct node_properties* properties) {
 
 
 int send_message(struct node_properties* properties, unsigned long node_id_port, struct msg* message) {
-
     struct addrinfo* nodeAddr = NULL;
 
     // Get recipient info from group_list
@@ -373,6 +415,7 @@ int send_message(struct node_properties* properties, unsigned long node_id_port,
     int rn = random();
     int sc = rn % 99;
     if (sc < properties->sendFailureProbability) {
+        printf("Dropping packet\n");
         log_debug("Debug: Message dropped");
         return 0;
     }
@@ -391,16 +434,31 @@ int send_message(struct node_properties* properties, unsigned long node_id_port,
 
 
 int reply_answer(struct node_properties* properties, struct received_msg* received) {
+    unsigned long port = ntohs(received->client.sin_port);
+    printf("Received elect from %d, replying answer\n", port);
     struct msg ANSWER_msg;
     ANSWER_msg.msgID = ANSWER;
     ANSWER_msg.electionID = received->message.electionID;
     // TODO: verify port is in group list and same address info??
-    return send_message(properties, ntohs(received->client.sin_port), &ANSWER_msg);
+    return send_message(properties, port, &ANSWER_msg);
 }
 
 
 int register_coordinator(struct node_properties* properties, struct received_msg* received) {
-    properties->coordinator = ntohs(received->client.sin_port);
+    unsigned long port = ntohs(received->client.sin_port);
+
+    int found = -1;
+    for (int i = 0; i < properties->group_list.node_count; i++) {
+        if (properties->group_list.list[i].port == port) {
+            found = 0;
+        }
+    }
+    if (found < 0) {
+        printf("Coordinator %d not found in group list, discarding\n", port);
+        return -1;
+    }
+    printf("Set coordinator to %d\n", port);
+    properties->coordinator = port;
     return 0;
 }
 
@@ -412,7 +470,7 @@ void merge_clocks(struct clock our_vector_clock[MAX_NODES],  struct clock receiv
         struct clock* current_clock = &our_vector_clock[i];
 
         for (int j = 0; j < MAX_NODES; j++) {
-            struct clock* received_clock = &received_vector_clock[i];
+            struct clock* received_clock = &received_vector_clock[j];
 
             if (received_clock->nodeId != current_clock->nodeId)
                 continue;
