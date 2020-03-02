@@ -416,6 +416,7 @@ int send_message(struct node_properties* properties, unsigned long node_id_port,
     int rn = random();
     int sc = rn % 99;
     if (sc < properties->sendFailureProbability) {
+        printf("Dropping packet\n");
         log_debug("Debug: Message dropped");
         return 0;
     }
