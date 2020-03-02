@@ -200,11 +200,6 @@ int main(int argc, char ** argv) {
     }
   }
 
-  // NOTE to avoid memory leaks you must free the struct returned
-  // by getaddrinfo. You will probably want to retrieve the information
-  // just once and then associate it with the IP address, port pair.
-  // Freeing is done with a call to get freeaddrinfo();
-
   return 0;
   
 }

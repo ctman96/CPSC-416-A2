@@ -46,6 +46,7 @@ struct node_properties {
 struct received_msg {
     struct sockaddr_in client;  // Sender of the message
     struct msg message;         // Message
+    int error;
 };
 
 int state_main(struct node_properties* properties);

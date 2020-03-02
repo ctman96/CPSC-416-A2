@@ -14,7 +14,7 @@ static FILE* fp;
 int init_logger(char* file_name){
     if (running) return -1;
     log_file = file_name;
-    fp = fopen(LOG_FILE,"w"); // Open new file
+    fp = fopen(log_file,"w"); // Open new file
 
     if (!fp) {
         printf("Unable to open log file!");

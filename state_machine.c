@@ -57,7 +57,7 @@ int send_AYA(struct node_properties* properties) {
 
 // sends ELECT message to all nodes in group list with higher port
 int send_ELECTS(struct node_properties* properties) {
-    for (int i = 1; i < properties->group_list.node_count; i++) {
+    for (int i = 0; i < properties->group_list.node_count; i++) {
         if (properties->group_list.list[i].port > properties->port) {
             struct msg ELECT_msg;
             ELECT_msg.msgID = ELECT;
@@ -74,9 +74,8 @@ int send_ELECTS(struct node_properties* properties) {
 // sends COORDs to all nodes with lower port
 int send_COORDS(struct node_properties* properties) {
     // start from one, as self is index zero. Send coords to all lower ports
-    for (int i = 1; i <= properties->group_list.node_count; i++) {
+    for (int i = 0; i < properties->group_list.node_count; i++) {
         if (properties->group_list.list[i].port < properties->port) {
-            printf("%d, %s, %d", i, properties->group_list.list[i].hostname, properties->group_list.list[i].port);
             struct msg COORD_msg;
             COORD_msg.msgID = COORD;
             COORD_msg.electionID = properties->curElectionId;
@@ -104,6 +103,7 @@ int normal_state(struct node_properties* properties) {
 
     // Check for message
     struct received_msg received = receive_message(properties);
+    if (received.error < 0) return -1;
 
     switch(received.message.msgID) {
         case ELECT:
@@ -165,6 +165,7 @@ int aya_state(struct node_properties* properties) {
 
     // Check for message
     struct received_msg received = receive_message(properties);
+    if (received.error < 0) return -1;
 
     switch(received.message.msgID) {
         case ELECT:
@@ -174,7 +175,9 @@ int aya_state(struct node_properties* properties) {
             properties->state = ELECT_STATE;
             return 0;
         case COORD:
-            register_coordinator(properties, &received);
+            if (register_coordinator(properties, &received) < 0) {
+                break;
+            }
             printf("Switching from AYA to NORMAL state\n");
             to_normal(properties);
             return 0;
@@ -209,9 +212,13 @@ int elect_state(struct node_properties* properties) {
 
     // first respond to recieved messages
     struct received_msg received = receive_message(properties);
+    if (received.error < 0) return -1;
+
     switch(received.message.msgID) {
         case COORD:
-            register_coordinator(properties, &received);
+            if (register_coordinator(properties, &received) < 0) {
+                break;
+            }
             printf("Switching from ELECT to NORMAL state\n");
             to_normal(properties);
             return 0;
@@ -240,9 +247,13 @@ int elect_state(struct node_properties* properties) {
  */
 int await_answer_state(struct node_properties* properties) {
     struct received_msg received = receive_message(properties);
+    if (received.error < 0) return -1;
+
     switch(received.message.msgID) {
         case COORD:
-            register_coordinator(properties, &received);
+            if (register_coordinator(properties, &received) < 0) {
+                break;
+            }
             printf("Switching from AWAIT_ANSWER_STATE to NORMAL_STATE\n");
             to_normal(properties);
             return 0;
@@ -280,9 +291,13 @@ int await_answer_state(struct node_properties* properties) {
  */
 int await_coord_state(struct node_properties* properties) {
     struct received_msg received = receive_message(properties);
+    if (received.error < 0) return -1;
+
     switch(received.message.msgID) {
         case COORD:
-            register_coordinator(properties, &received);
+            if (register_coordinator(properties, &received) < 0) {
+                break;
+            }
             printf("Switching from AWAIT_COORD_STATE to NORMAL_STATE\n");
             to_normal(properties);
             return 0;
@@ -314,8 +329,9 @@ int await_coord_state(struct node_properties* properties) {
 struct received_msg receive_message(struct node_properties* properties) {
     struct received_msg received_message;
     received_message.message.msgID = INVALID;
+    received_message.error = 0;
 
-    int len;
+    int len = sizeof(received_message.client);
     char  buff[100];
     memset(&received_message.client, 0, sizeof(received_message.client));
 
@@ -324,7 +340,9 @@ struct received_msg receive_message(struct node_properties* properties) {
     if (size == -1 ) {
         if (errno != EAGAIN && errno != EWOULDBLOCK) {
             printf("Error receiving: %s! \n", strerror(errno));
-            // TODO ?
+            received_message.message.msgID = INVALID;
+            received_message.error = -1;
+            return received_message;
         } else {
             return received_message;
         }
@@ -388,18 +406,31 @@ int send_message(struct node_properties* properties, unsigned long node_id_port,
 
 
 int reply_answer(struct node_properties* properties, struct received_msg* received) {
-    printf("Received elect from %d, replying answer\n", received->client.sin_port);
+    unsigned long port = ntohs(received->client.sin_port);
+    printf("Received elect from %d, replying answer\n", port);
     struct msg ANSWER_msg;
     ANSWER_msg.msgID = ANSWER;
     ANSWER_msg.electionID = received->message.electionID;
     // TODO: verify port is in group list and same address info??
-    return send_message(properties, ntohs(received->client.sin_port), &ANSWER_msg);
+    return send_message(properties, port, &ANSWER_msg);
 }
 
 
 int register_coordinator(struct node_properties* properties, struct received_msg* received) {
-    printf("Set coordinator to %d\n", received->client.sin_port);
-    properties->coordinator = ntohs(received->client.sin_port);
+    unsigned long port = ntohs(received->client.sin_port);
+
+    int found = -1;
+    for (int i = 0; i < properties->group_list.node_count; i++) {
+        if (properties->group_list.list[i].port == port) {
+            found = 0;
+        }
+    }
+    if (found < 0) {
+        printf("Coordinator %d not found in group list, discarding\n", port);
+        return -1;
+    }
+    printf("Set coordinator to %d\n", port);
+    properties->coordinator = port;
     return 0;
 }
 

@@ -5,8 +5,6 @@
 #ifndef A2_LOGGER_H
 #define A2_LOGGER_H
 
-#define LOG_FILE "event.log"
-
 #include "msg.h"
 
 // Initialize logger
