@@ -62,14 +62,29 @@ int send_ELECTS(struct node_properties* properties) {
             struct msg ELECT_msg;
             ELECT_msg.msgID = ELECT;
 
-            // sets self nodeid, electionctr as id for debugging 
+            // sets self nodeid, electionctr as id for debugging
             char idStr[32];
-            sprintf(str, "%d%d", (int)properties->port, properties->curElectionId);
+            sprintf(idStr, "%d%d", (int)properties->port, properties->curElectionId);
             unsigned int id = atoi(idStr);
             ELECT_msg.electionID = id;
             return send_message(properties, group_list.list[i].port, &ELECT_msg);
         }
     }
+}
+
+// sends COORDs to all nodes with lower port
+int send_COORDS(struct node_properties* properties) {
+    // start from one, as self is index zero. Send coords to all lower ports
+    for (int i = 1; i =< properties->group_list.node_count; i++) {
+        if (properties->group_list[i].port < properties->port) {
+            struct msg COORD_msg;
+            COORD_msg.msgID = COORD;
+            COORD_msg.electionID = curElectionId;
+            return send_message(properties, properties->group_list[i].port, &COORD_msg);
+        }
+    }
+
+
 }
 
 /*
@@ -216,11 +231,12 @@ int elect_state(struct node_properties* properties) {
             break;
         default:
             break;
+    }
     
     // send out election
     send_ELECTS(properties);
 
-    properties->state = await_answer_state;
+    properties->state = AWAIT_ANSWER_STATE;
     return 0;
 }
 

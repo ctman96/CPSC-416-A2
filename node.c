@@ -247,8 +247,10 @@ int main(int argc, char ** argv) {
   // Coordinator -> Send coord?
   // Others -> ??  Guessing nothing, since if they can't reach the original coordinator they'll call an election
 
-  // Do inital coordinator send-elects 
-  send_ELECTS(properties);
+  // Do initial coord message send if coordinator
+  if (properties.coordinator == properties->port) {
+      send_COORDS(properties);
+  }
 
   // Main state loop
   int i;
