@@ -154,7 +154,7 @@ int main(int argc, char ** argv) {
   // Log startup
   char lg_msg[64];
   sprintf(lg_msg, "Started N%d", properties.port);
-  log_event("Started N", properties.port, properties.vectorClock, MAX_NODES);
+  log_event(lg_msg, properties.port, properties.vectorClock, MAX_NODES);
 
   
   // This is some sample code to setup a UDP socket for sending and receiving.
@@ -198,10 +198,12 @@ int main(int argc, char ** argv) {
     i = state_main(&properties);
     if (i < 0) {
       printf("Error, Program exiting\n");
+      close_logger();
       return i;
     }
   }
 
+  close_logger();
   return 0;
   
 }
