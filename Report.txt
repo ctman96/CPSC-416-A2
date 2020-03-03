@@ -13,7 +13,7 @@ and group 1, but no communication between group 2 nodes apart from between thems
 some issues arising from group 1's nodes sending multiple coords to nodes that were higher in port number. 
 After some debugging, we narrowed down the lack of communication from group 2 nodes as a result of a
 lack of host-to-network (and vice versa) byte translation on the part of group 1 and us, which resulted
-in us being able to communicate with group 2.
+in us being able to communicate with group 2. We also made sure to use the same parameters when running nodes.
 
 For our tests against group 1, no problems were found with how our nodes interacted with theirs.
 
