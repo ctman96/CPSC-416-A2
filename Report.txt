@@ -11,14 +11,14 @@ point tested with less or more nodes from one or more of the groups.
 For our tests with all groups together, we noticed that there was communication between our nodes 
 and group 1, but no communication between group 2 nodes apart from between themselves. There was also 
 some issues arising from group 1's nodes sending multiple coords to nodes that were higher in port number. 
-After some debugging, we narrowed down the lack of commuication from group 2 nodes as a result of a 
-lack of host-to-network (and vice versa) translation on the part of group 1 and us, which resulted 
-in us being able to communicate.
+After some debugging, we narrowed down the lack of communication from group 2 nodes as a result of a
+lack of host-to-network (and vice versa) byte translation on the part of group 1 and us, which resulted
+in us being able to communicate with group 2.
 
 For our tests against group 1, no problems were found with how our nodes interacted with theirs.
 
-Afterwards, we then fixed the problems by adding host to network byte order conversion for our packet send 
-function, and network to host byte order conversions for the packet recieve function. This applied to all
+Afterwards, we then fixed the problems by adding host to network byte order conversion for our packet send
+function, and network to host byte order conversions for the packet receive function. This applied to all
 data in the packet structure, including the message ID, election ID, and vector clock elements.
 
 
