@@ -7,14 +7,13 @@
 #include <stdbool.h>
 
 static bool running;
-static char* log_file = "event.log";
 static FILE* fp;
 
 
 int init_logger(char* file_name){
     if (running) return -1;
-    log_file = file_name;
-    fp = fopen(LOG_FILE,"w"); // Open new file
+    printf("Opening log %s\n", file_name);
+    fp = fopen(file_name,"w"); // Open new file
 
     if (!fp) {
         printf("Unable to open log file!");
@@ -65,6 +64,7 @@ int log_event(char* text, int node, struct clock* clock, int clock_length) {
     pos += sprintf(&event_str[pos], "}\n");
 
     fprintf(fp, event_str);
+    fflush(fp);
 
     return 0;
 }
@@ -77,6 +77,16 @@ int log_debug(char* text) {
     }
 
     fprintf(fp, "%s\n", text);
+    fflush(fp);
 
     return 0;
+}
+
+
+void close_logger() {
+    if (!running || !fp) {
+        printf("Cannot close, Logger not initialized!");
+        return;
+    }
+    fclose(fp);
 }

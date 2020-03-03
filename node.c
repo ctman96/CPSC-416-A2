@@ -139,6 +139,8 @@ int main(int argc, char ** argv) {
     }
     group_list_cursor++;
   }
+  // Track the original coordinator
+  properties.orig_coordinator = properties.coordinator;
 
   // Setup random seed
   srandom(time(0));
@@ -150,7 +152,9 @@ int main(int argc, char ** argv) {
   properties.rand_aya_time = rn % (2*properties.AYATime);
 
   // Log startup
-  log_event("Started N3", 3, properties.vectorClock, MAX_NODES);
+  char lg_msg[64];
+  sprintf(lg_msg, "Started N%d", properties.port);
+  log_event(lg_msg, properties.port, properties.vectorClock, MAX_NODES);
 
   
   // This is some sample code to setup a UDP socket for sending and receiving.
@@ -183,69 +187,10 @@ int main(int argc, char ** argv) {
     exit(EXIT_FAILURE); 
   }
 
-  // At this point the socket is setup and can be used for both
-  // sending and receiving
-  
-  // Now pretend we are A "client, but sent the message to ourselves
-  char *msg = "A message to myself!";
-
-  // This would normally be a real hostname or IP address
-  // as opposed to localhost
-  char *hostname = "localhost";
-  struct addrinfo hints, *serverAddr;
-  serverAddr = NULL;
-
-  memset(&hints, 0, sizeof(hints));
-  hints.ai_socktype = SOCK_DGRAM;
-  hints.ai_family = AF_INET;
-  hints.ai_protocol = IPPROTO_UDP;
-
-  if (getaddrinfo(hostname, argv[1], &hints, &serverAddr)) {
-    printf("Couldn't lookup hostname\n");
-    return -1;
+  // Do initial coord message send if coordinator
+  if (properties.coordinator == properties.port) {
+      if (send_COORDS(&properties) < 0) return -1;
   }
-  
-
-  // Send the message to ourselves
-  int bytesSent;
-  bytesSent = sendto(properties.sockfd, (const char *) msg, strlen(msg), MSG_CONFIRM,
-		     serverAddr->ai_addr, serverAddr->ai_addrlen);
-  if (bytesSent != strlen(msg)) {
-    perror("UDP send failed: ");
-    return -1;
-  }
-
-
-
-  struct sockaddr_in client;
-    int len;
-  char  buff[100];
-
-  memset(&client, 0, sizeof(client));
-  //  client.sin_family = AF_INET;
-  // client.sin_port = htons(properties.port);
-  //client.sin_addr.s_addr = INADDR_ANY;
-  
-  int n; 
-  n = recvfrom(properties.sockfd, buff, 100, MSG_WAITALL,
-	       (struct sockaddr *) &client, &len);
-
-  // client will point to the address info of the node
-  // that sent this message. The information can be used
-  // to send back a response, if needed
-  if (n < 0) {
-    perror("Receiving error");
-    return -3;
-  }
-  
-  buff[n] = (char) 0;
-  printf("from %X:%d Size = %d - %s\n",
-	 ntohl(client.sin_addr.s_addr), ntohs(client.sin_port),
-	 n, buff);
-
-  // TODO: What needs to be done on startup?
-  // Coordinator -> Send coord?
-  // Others -> ??  Guessing nothing, since if they can't reach the original coordinator they'll call an election
 
   // Main state loop
   int i;
@@ -253,17 +198,12 @@ int main(int argc, char ** argv) {
     i = state_main(&properties);
     if (i < 0) {
       printf("Error, Program exiting\n");
+      close_logger();
       return i;
     }
   }
 
-  // NOTE to avoid memory leaks you must free the struct returned
-  // by getaddrinfo. You will probably want to retrieve the information
-  // just once and then associate it with the IP address, port pair.
-  // Freeing is done with a call to get freeaddrinfo();
-
-  freeaddrinfo(serverAddr);
-
+  close_logger();
   return 0;
   
 }
