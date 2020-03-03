@@ -414,6 +414,11 @@ int send_message(struct node_properties* properties, unsigned long node_id_port,
     properties->vectorClock[0].time++;
     memcpy(message->vectorClock, properties->vectorClock, sizeof(message->vectorClock));
 
+    // Log Send
+    char lg_msg[128];
+    sprintf(lg_msg, "Send %s Message to N%d: (electionId: %d):", msgTypeToStr(message->msgID), node_id_port, message->electionID);
+    log_event(lg_msg, properties->port, properties->vectorClock, MAX_NODES);
+
     // Convert to net byte order
     message->msgID = htonl(message->msgID);
     message->electionID = htonl(message->electionID);
@@ -421,11 +426,6 @@ int send_message(struct node_properties* properties, unsigned long node_id_port,
         message->vectorClock[i].nodeId = htonl(message->vectorClock[i].nodeId);
         message->vectorClock[i].time = htonl(message->vectorClock[i].time);
     }
-
-    // Log Send
-    char lg_msg[128];
-    sprintf(lg_msg, "Send %s Message to N%d: (electionId: %d):", msgTypeToStr(message->msgID), node_id_port, message->electionID);
-    log_event(lg_msg, properties->port, properties->vectorClock, MAX_NODES);
 
     // Check if packet should be "dropped"
     int rn = random();
