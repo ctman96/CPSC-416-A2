@@ -1,0 +1,21 @@
+For reference, this example was run with three nodes, using the following commands:
+./node 7007 group.list 7007_event.log 10 10 80
+./node 8008 group.list 8008_event.log 10 10 50
+./node 9009 group.list 9009_event.log 10 10 50
+
+
+This log file is an example of what I found to be an interesting election example. In this example, the
+nodes can be said to be dealing with particularly unreliable networks – packets are dropped very
+frequently.  Among the rest of the behavior, what I found most interesting is the state they all ended up
+in: a stalemate where each determined that they are the coordinator.
+
+N7007 was the first to go. Suffering from the worst drop rate, it was constantly having issues reaching the coordinator or sending elections.
+N8008 went next. After not receiving an answer from N9009 it set itself as coordinator, and sent a COORD to N7007 which was dropped.
+N9009 tried to respond to N8008’s last ELECT, however its ANSWER reply was dropped, as were both of the COORD messages it tried to send down.
+
+This example is essentially displaying network partitioning, with the high failure rate acting to isolate
+each of the nodes. By doing so, each node is able to set themselves as a coordinator, which highlights a
+major issue with the assignment implementation. Once the nodes reach this state, they won’t recover –
+they’ll each endlessly assume they’re the coordinator unless they’re rebooted, and the network
+improves. The solution to this would then be what we discussed for network partitions: to ensure there
+is only ever one coordinator, presumably via quorum protocol.
