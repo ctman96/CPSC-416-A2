@@ -1,0 +1,110 @@
+Started N7007
+N7007 {"N7007" : 1}
+Send AYA Message to N9009: (electionId: 7007):
+N7007 {"N7007" : 2}
+Debug: Message dropped
+Send ELECT Message to N8008: (electionId: 700700001):
+N7007 {"N7007" : 3}
+Debug: Message dropped
+Send ELECT Message to N9009: (electionId: 700700001):
+N7007 {"N7007" : 4}
+Receive COORD Message: (electionId: 900900002):
+N7007 {"N7007" : 5 , "N8008" : 3 , "N9009" : 11}
+Send AYA Message to N9009: (electionId: 7007):
+N7007 {"N7007" : 6 , "N8008" : 3 , "N9009" : 11}
+Debug: Message dropped
+Send ELECT Message to N8008: (electionId: 700700002):
+N7007 {"N7007" : 7 , "N8008" : 3 , "N9009" : 11}
+Debug: Message dropped
+Send ELECT Message to N9009: (electionId: 700700002):
+N7007 {"N7007" : 8 , "N8008" : 3 , "N9009" : 11}
+Receive COORD Message: (electionId: 900900003):
+N7007 {"N7007" : 9 , "N8008" : 3 , "N9009" : 15}
+Send AYA Message to N9009: (electionId: 7007):
+N7007 {"N7007" : 10 , "N8008" : 3 , "N9009" : 15}
+Debug: Message dropped
+Send ELECT Message to N8008: (electionId: 700700003):
+N7007 {"N7007" : 11 , "N8008" : 3 , "N9009" : 15}
+Debug: Message dropped
+Send ELECT Message to N9009: (electionId: 700700003):
+N7007 {"N7007" : 12 , "N8008" : 3 , "N9009" : 15}
+Debug: Message dropped
+Started N8008
+N8008 {"N8008" : 1}
+Send AYA Message to N9009: (electionId: 8008):
+N8008 {"N8008" : 2}
+Debug: Message dropped
+Send ELECT Message to N9009: (electionId: 800800001):
+N8008 {"N8008" : 3}
+Receive ANSWER Message: (electionId: 800800001):
+N8008 {"N8008" : 4 , "N9009" : 5}
+Receive COORD Message: (electionId: 900900003):
+N8008 {"N8008" : 5 , "N9009" : 14 , "N7007" : 8}
+Send AYA Message to N9009: (electionId: 8008):
+N8008 {"N8008" : 6 , "N9009" : 14 , "N7007" : 8}
+Receive IAA Message: (electionId: 8008):
+N8008 {"N8008" : 7 , "N9009" : 17 , "N7007" : 8}
+Send AYA Message to N9009: (electionId: 8008):
+N8008 {"N8008" : 8 , "N9009" : 17 , "N7007" : 8}
+Send ELECT Message to N9009: (electionId: 800800002):
+N8008 {"N8008" : 9 , "N9009" : 17 , "N7007" : 8}
+Send COORD Message to N7007: (electionId: 800800002):
+N8008 {"N8008" : 10 , "N9009" : 17 , "N7007" : 8}
+Debug: Message dropped
+Started N9009
+N9009 {"N9009" : 1}
+Send COORD Message to N8008: (electionId: 900900000):
+N9009 {"N9009" : 2}
+Debug: Message dropped
+Send COORD Message to N7007: (electionId: 900900000):
+N9009 {"N9009" : 3}
+Debug: Message dropped
+Receive ELECT Message: (electionId: 800800001):
+N9009 {"N9009" : 4 , "N8008" : 3}
+Send ANSWER Message to N8008: (electionId: 800800001):
+N9009 {"N9009" : 5 , "N8008" : 3}
+Send COORD Message to N8008: (electionId: 900900001):
+N9009 {"N9009" : 6 , "N8008" : 3}
+Debug: Message dropped
+Send COORD Message to N7007: (electionId: 900900001):
+N9009 {"N9009" : 7 , "N8008" : 3}
+Debug: Message dropped
+Receive ELECT Message: (electionId: 700700001):
+N9009 {"N9009" : 8 , "N8008" : 3 , "N7007" : 4}
+Send ANSWER Message to N7007: (electionId: 700700001):
+N9009 {"N9009" : 9 , "N8008" : 3 , "N7007" : 4}
+Debug: Message dropped
+Send COORD Message to N8008: (electionId: 900900002):
+N9009 {"N9009" : 10 , "N8008" : 3 , "N7007" : 4}
+Debug: Message dropped
+Send COORD Message to N7007: (electionId: 900900002):
+N9009 {"N9009" : 11 , "N8008" : 3 , "N7007" : 4}
+Receive ELECT Message: (electionId: 700700002):
+N9009 {"N9009" : 12 , "N8008" : 3 , "N7007" : 8}
+Send ANSWER Message to N7007: (electionId: 700700002):
+N9009 {"N9009" : 13 , "N8008" : 3 , "N7007" : 8}
+Debug: Message dropped
+Send COORD Message to N8008: (electionId: 900900003):
+N9009 {"N9009" : 14 , "N8008" : 3 , "N7007" : 8}
+Send COORD Message to N7007: (electionId: 900900003):
+N9009 {"N9009" : 15 , "N8008" : 3 , "N7007" : 8}
+Receive AYA Message: (electionId: 8008):
+N9009 {"N9009" : 16 , "N8008" : 6 , "N7007" : 8}
+Send IAA Message to N8008: (electionId: 8008):
+N9009 {"N9009" : 17 , "N8008" : 6 , "N7007" : 8}
+Receive AYA Message: (electionId: 8008):
+N9009 {"N9009" : 18 , "N8008" : 8 , "N7007" : 8}
+Send IAA Message to N8008: (electionId: 8008):
+N9009 {"N9009" : 19 , "N8008" : 8 , "N7007" : 8}
+Debug: Message dropped
+Receive ELECT Message: (electionId: 800800002):
+N9009 {"N9009" : 20 , "N8008" : 9 , "N7007" : 8}
+Send ANSWER Message to N8008: (electionId: 800800002):
+N9009 {"N9009" : 21 , "N8008" : 9 , "N7007" : 8}
+Debug: Message dropped
+Send COORD Message to N8008: (electionId: 900900004):
+N9009 {"N9009" : 22 , "N8008" : 9 , "N7007" : 8}
+Debug: Message dropped
+Send COORD Message to N7007: (electionId: 900900004):
+N9009 {"N9009" : 23 , "N8008" : 9 , "N7007" : 8}
+Debug: Message dropped

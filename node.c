@@ -129,7 +129,9 @@ int main(int argc, char ** argv) {
     }
 
     // Initialize other nodes to time 0
-    properties.vectorClock[i].nodeId = properties.group_list.list[group_list_cursor].port;
+    properties.vectorClock[i].nodeId = 0;
+    if (group_list_cursor < properties.group_list.node_count)
+      properties.vectorClock[i].nodeId =  properties.group_list.list[group_list_cursor].port;
     properties.vectorClock[i].time = 0;
 
     // Set coordinator to highest nodeId
