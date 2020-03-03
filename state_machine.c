@@ -372,6 +372,14 @@ struct received_msg receive_message(struct node_properties* properties) {
             return received_message;
         }
     } else {
+        // Convert from byte order
+        received_message.message.msgID = ntohl(received_message.message.msgID);
+        received_message.message.electionID = ntohl(received_message.message.electionID);
+        for (int i = 0; i < MAX_NODES; i++) {
+            received_message.message.vectorClock[i].nodeId = ntohl(received_message.message.vectorClock[i].nodeId);
+            received_message.message.vectorClock[i].time = ntohl(received_message.message.vectorClock[i].time);
+        }
+
         properties->vectorClock[0].time++;
 
         // Update vector clock
@@ -405,6 +413,14 @@ int send_message(struct node_properties* properties, unsigned long node_id_port,
     // Increment our clock and add to msg
     properties->vectorClock[0].time++;
     memcpy(message->vectorClock, properties->vectorClock, sizeof(message->vectorClock));
+
+    // Convert to net byte order
+    message->msgID = htonl(message->msgID);
+    message->electionID = htonl(message->electionID);
+    for (int i = 0; i < MAX_NODES; i++) {
+        message->vectorClock[i].nodeId = htonl(message->vectorClock[i].nodeId);
+        message->vectorClock[i].time = htonl(message->vectorClock[i].time);
+    }
 
     // Log Send
     char lg_msg[128];
