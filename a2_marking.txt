@@ -1,45 +1,30 @@
-Total before late penalty: [/100]
+Grades for: 2_ctman96_mattm177
+
+Total before late penalty: [39/39]
+
+[11/11] * Bully Algorithm 
+      Properly handles election on startup
+         Lowest to highest starts first  [2/2]
+	       Highest to lowest               [2/2]
+	       Random start                    [2/2]
+         Discussion of structure, design, organization [5/5]  
 
 
-[/25] * Bully Algorithm 
-      Events            [ /5]
-      Responses         [ /5]
-      Timers/Timeouts   [ /5]
-      Structure, design, organization [/10]  
+[11/11] * Vector Clock implementation 
+       Increments local clock at appropriate times [3/3]
+       Properly sends/receives and updates vector clocks [3/3]
+       Discussion of lock implementation including structure and
+       organization [5/5]
 
+[10/10] * Interoperability 
+        Implementation 1   [5/5]
+        Discussion with TA [5/5]
 
-[/15] * Vector Clock implementation 
-       Increments local clock at appropriate times [ /5]
-       Properly sends/receives and updates vector clocks [/5]
-       Structure, design, and organization of clock implementation [ /5]
+[7/7] ShiViz Example
+      Produced an example [2/2]
+      ShiVizReport.txt file explaining example and its 
+       significance along with discussion    [5/5]
 
-[/10] * Interoperability 
-        Implementation 1   [ /4]
-        Implementation 2   [ /4]
-	Interoperability report [/2]
+Additional Modifiers:
 
-[/10] * Event Logging for ShiViz 
-      Log events - 2 each
-	Election
-	Coordinator
-	Answer
-	Timeout events
-	Sending/Receiving Events
- 
-[/15] ShiViz Example
-       Must involve at least 3 notes and show key events [/10]
-       ShiVizReport.txt file explaining example and its 
-       significance    [/5]
- 
-[/25] TA Interview
-      Discussions and responses to the following areas:
-      * Interoperability Experience
-      * Usage of ShiViz - what did you use it for, what was your experience
-         when did it help, what you found interesting/confusing about it
-      * Threads vs event driven implementation, was it considered why 
-        did you choose what you did. 
-      * Various election scenarios, what would happen with two simultaneous
-        elections, failure scenarios etc.
-      * The specified protocol packet had an election ID field, is it 
-        required for proper operation?
-
+Notes:
