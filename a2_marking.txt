@@ -1,0 +1,30 @@
+Grades for: 2_ctman96_mattm177
+
+Total before late penalty: [39/39]
+
+[11/11] * Bully Algorithm 
+      Properly handles election on startup
+         Lowest to highest starts first  [2/2]
+	       Highest to lowest               [2/2]
+	       Random start                    [2/2]
+         Discussion of structure, design, organization [5/5]  
+
+
+[11/11] * Vector Clock implementation 
+       Increments local clock at appropriate times [3/3]
+       Properly sends/receives and updates vector clocks [3/3]
+       Discussion of lock implementation including structure and
+       organization [5/5]
+
+[10/10] * Interoperability 
+        Implementation 1   [5/5]
+        Discussion with TA [5/5]
+
+[7/7] ShiViz Example
+      Produced an example [2/2]
+      ShiVizReport.txt file explaining example and its 
+       significance along with discussion    [5/5]
+
+Additional Modifiers:
+
+Notes:
